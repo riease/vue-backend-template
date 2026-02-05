@@ -1,5 +1,5 @@
 ---
-name: setup_vue_backend
+name: setup-vue-backend
 description: Installs standard Vue 3 dependencies and configures scripts for the AutoRisk-365 compliant stack. This skill hydrates a package.json with the required dependencies and run scripts.
 ---
 
@@ -98,6 +98,49 @@ _Note: If `package.json` already has scripts, merge these in, carefully resolvin
 }
 ```
 
-### 5. Verification
+### 5. Configure Aliases
+
+Update your project configuration to support the `@` alias for `./src`.
+
+#### Vite Configuration (`vite.config.ts`)
+
+Add the `alias` configuration to your `defineConfig`:
+
+```typescript
+import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+// ...
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    // ...
+  ],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  }
+})
+```
+
+#### TypeScript Configuration (`tsconfig.json` or `tsconfig.app.json`)
+
+Add `baseUrl` and `paths` to `compilerOptions`:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+### 6. Verification
 
 After running the above steps, run `npm run dev` to ensure the project starts correctly.

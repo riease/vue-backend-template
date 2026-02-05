@@ -96,25 +96,15 @@ function loadDataModelPrefixes() {
 }
 
 function getClassName(operationId, pathStr) {
-    // Use path as primary source, not operationId
-    let base;
-
-    // Extract from path
-    const parts = pathStr.split('/').filter(Boolean);
-    base = parts[parts.length - 1]; // last part
-
-    // If path ends with a parameter placeholder like {id}, use the second-to-last part
-    if (base && base.startsWith('{') && base.endsWith('}')) {
-        base = parts[parts.length - 2] || base;
-    }
-
-    // Fallback to operationId if path extraction failed
+    let base = operationId;
     if (!base) {
-        base = operationId || 'Unknown';
+        // Fallback to path
+        const parts = pathStr.split('/').filter(Boolean);
+        base = parts[parts.length - 1]; // last part
     }
 
-    // Remove common prefixes (including ar3/AR3)
-    base = base.replace(/^(ar3|get|list|query|search|find)/i, '');
+    // Remove common prefixes
+    base = base.replace(/^(get|list|query|search|find)/i, '');
 
     // Singularize implementation
     if (base.endsWith('s') && !base.endsWith('ss')) {
