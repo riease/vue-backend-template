@@ -1,0 +1,735 @@
+openapi: 3.1.0
+info:
+  title: AR3-Me 個人資料管理模組
+  description: |
+    ## API 清單
+    * AR3-Me-Read 查詢個人資料
+    * AR3-Me-Update 編輯個人資料
+    * AR3-Me-ChangePassword 變更個人密碼
+
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，各 API Response Body 統一沿用 `ErrorResponse` 結構：
+
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey, AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/帳號管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/me"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: https://www.autorisk365.com
+      version:
+        description: 版號
+        default: v1
+tags:
+  - name: Account
+    description: 以本人視角管理個人資料與密碼
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      tags:
+        - Account
+      summary: 查詢本人基本資料
+      operationId: AR3-Me-Read
+      description: |
+        回傳 `accounts` 及關聯 `roles`、`tenants` 的摘要資訊，供前端顯示登入者資料與權限。
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+      responses:
+        "200":
+          description: 個人資料
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Account
+      summary: 編輯本人基本資料
+      operationId: AR3-Me-Update
+      description: |
+        更新聯絡資訊與偏好設定。欄位定義對應 `accounts.contact_name`、`accounts.email`，
+        並對應 BDD 中「編輯現有使用者帳號」場景。
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      x-related-tables:
+        - public.accounts
+      x-bdd-reference:
+        feature: docs/features/帳號管理.feature
+        scenario: 編輯現有使用者帳號
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountProfileRequest"
+            examples:
+              updateProfile:
+                value:
+                  contactName: 王小明
+                  email: wang.xiaoming@example.com
+      responses:
+        "200":
+          description: 更新後的個人資料
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /password:
+    post:
+      tags:
+        - Account
+      summary: 變更本人密碼
+      operationId: AR3-Me-ChangePassword
+      description: |
+        驗證舊密碼、比對新密碼與確認密碼是否一致（對應 BDD「建立帳號時密碼與確認密碼不一致」情境），
+        成功後更新 `accounts.password_hash` 並留下 `account_password_events` 紀錄。密碼格式遵守 12 碼以上且需包含
+        大、小寫字母、數字與特殊字元。
+      #      parameters:
+      #        - $ref: '#/components/parameters/TenantHeader'
+      x-related-tables:
+        - public.accounts
+        - public.account_password_events
+      x-bdd-reference:
+        feature: docs/features/帳號管理.feature
+        scenario: 建立帳號時密碼與確認密碼不一致
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+            examples:
+              changePassword:
+                value:
+                  currentPassword: OldPa55w0rd!
+                  newPassword: NewPa55w0rd!
+                  newPasswordConfirm: NewPa55w0rd!
+      responses:
+        "204":
+          description: 密碼更新成功
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Uid
+      in: header
+      description: |
+        指定租戶識別碼，對應 `accounts.tenant_uid`。雖是非必填，但建議提供以提升防呆安全性(尤其是平台管理員在跨租戶操作時)。
+      schema:
+        type: string
+        format: uuid
+    offsetParam:
+      description: 查詢分頁的 offset。與 limit 搭配使用。
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        example: 0
+    limitParam:
+      description: 查詢分頁的 limit。與 offset 搭配使用。
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        example: 20
+    noCacheHeader:
+      name: Cache-Control
+      in: header
+      required: true
+      schema:
+        type: string
+        default: no-cache
+    jsonContentTypeHeader:
+      name: Content-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        default: application/json
+  headers:
+    NoStore:
+      description: 告知客戶端不得快取此回應
+      schema:
+        type: string
+        example: no-store
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源（例如 Token Id）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突（例如 Token 已撤銷或密碼未通過策略）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: 觸發濫用防護或速率限制
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ResponseBase:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: |
+            錯誤代碼: 
+            * `0` : 成功
+            * `1xxx` : 參數錯誤
+            * `2xxx` : 權限不合法或資料不存在
+            * `3xxx` : 系統異常
+        message:
+          type: string
+          description: 錯誤訊息
+    Paging:
+      description: 分頁資訊
+      type: object
+      properties:
+        offset:
+          description: 查詢分頁的 offset
+          type: integer
+        limit:
+          description: 查詢分頁的 limit
+          type: integer
+        total:
+          description: 資料總筆數
+          type: number
+    TimeRange:
+      description: 時間區間。有開始及結束時間。
+      type: object
+      properties:
+        startsAt:
+          description: 開始時間
+          type: string
+          format: date-time
+        endsAt:
+          description: 結束時間
+          type: string
+          format: date-time
+    #    SimpleResponse:
+    #      description: 只回應資料鍵值及名稱。
+    #      type: object
+    #      properties:
+    #        uid:
+    #          description: 鍵值
+    #          type: string
+    #          format: uuid
+    #        subject:
+    #          description: uid對應的標的的名稱
+    #          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+          description: HTTP 狀態描述
+        code:
+          type: string
+          description: 系統定義錯誤代碼（例如 `AUTH_INVALID_TOKEN`）
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+        path:
+          type: string
+          description: 觸發錯誤的 API 路徑
+        traceId:
+          type: string
+          description: 方便串接觀察性的追蹤 Id
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    ForgotPasswordRequest:
+      type: object
+      description: |
+        使用者發起忘記密碼，後端會依 `identifier` 尋找匹配的 `accounts`，若成立則建立
+        `account_password_events` FORGOT_PASSWORD 記錄並寄出含 Reset Token 的連結。
+      required:
+        - identifier
+        - cfToken
+      properties:
+        identifier:
+          type: string
+          maxLength: 255
+          description: 帳號（`accounts.username`），目前不支援以電子郵件尋找帳號
+        cfToken:
+          type: string
+          description: Turnstile / CAPTCHA 票證，避免惡意濫用
+        locale:
+          type: string
+          description: 控制郵件語系，預設 zh-TW
+          example: zh-TW
+          default: zh-TW
+        resetRedirectUrl:
+          type: string
+          format: uri
+          description: |
+            前端用於重設密碼的頁面，伺服器會在此 URI 後加上 `token` Query 參數後傳遞給使用者。
+    SignInRequest:
+      type: object
+      required:
+        - username
+        - password
+        - cfToken
+      properties:
+        username:
+          type: string
+          maxLength: 255
+          description: 登入帳號，對應 `accounts.username`
+        password:
+          type: string
+          format: password
+          minLength: 8
+        cfToken:
+          type: string
+          description: 前端驗證機制（如 Cloudflare Turnstile）的票證
+    #        clientId:
+    #          type: string
+    #          description: |
+    #            前端客戶端代碼，對應 `account_tokens.client_id`。建議使用 {channel}.{platform} 命名。
+    #          example: portal.web
+    #        audience:
+    #          type: string
+    #          description: |
+    #            Token 受眾，用於多系統串接，對應 `account_tokens.audience`。
+    #        scope:
+    #          type: string
+    #          description: "以空白分隔的權限列表，寫入 `account_tokens.scope`。"
+    #          example: account:read account:write
+    #        rememberMe:
+    #          type: boolean
+    #          default: false
+    #          description: 記住我，將 Refresh Token 有效期延長至 30 天
+    SignInResponse:
+      type: object
+      required:
+        - tokens
+        - profile
+      properties:
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+        profile:
+          $ref: "#/components/schemas/AccountProfile"
+    SignOutRequest:
+      type: object
+      properties:
+        sessionUid:
+          type: string
+          format: uuid
+          description: 授權會話的 Session ID
+    #        tokenId:
+    #          type: string
+    #          format: uuid
+    #          description: 欲撤銷的 Session Token Id (`account_tokens.token_id`)
+    #        refreshToken:
+    #          type: string
+    #          description: 搭配 Token Id 進行雙重驗證
+    TokenPair:
+      type: object
+      required:
+        - tokenType
+        - accessToken
+        - accessTokenExpiresAt
+        - refreshToken
+        - refreshTokenExpiresAt
+      properties:
+        tokenType:
+          type: string
+          description: 固定為 `Bearer`
+          example: Bearer
+        accessToken:
+          type: string
+          description: JWT Access Token，本身不落地儲存
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+          description: JWT Refresh Token，雜湊值儲存於 `account_tokens.token_hash`
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+        sessionUid:
+          type: string
+          format: uuid
+          description: 授權會話的 Session ID
+    #        scope:
+    #          type: string
+    #          description: 實際授權的 Scope
+    #        tenantUid:
+    #          type: string
+    #          format: uuid
+    #        accountUid:
+    #          type: string
+    #          format: uuid
+    SessionToken:
+      type: object
+      description: |
+        來源於 `account_tokens`，用於顯示各裝置的登入狀態。
+      x-related-tables:
+        - public.account_tokens
+      properties:
+        tokenId:
+          type: string
+          format: uuid
+        tokenType:
+          type: string
+          enum:
+            - ACCESS
+            - REFRESH
+            - API_KEY
+        clientId:
+          type: string
+        audience:
+          type: string
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        deviceName:
+          type: string
+          description: 前端可記錄的人性化裝置名稱
+        issuedAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        revoked:
+          type: boolean
+        revokedAt:
+          type: string
+          format: date-time
+        revocationReason:
+          type: string
+    TenantSummary:
+      type: object
+      description: |
+        供租戶選擇器顯示的租戶摘要資訊，來源為 `tenants`。
+      x-related-tables:
+        - public.tenants
+      required:
+        - tenantUid
+        - name
+      properties:
+        tenantUid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          description: 內部租戶代碼或客戶編號
+        status:
+          type: string
+          description: 租戶狀態（例如 ENABLED、DISABLED）
+    SwitchTenantRequest:
+      type: object
+      required:
+        - tenantUid
+      properties:
+        tenantUid:
+          type: string
+          format: uuid
+          description: 目標租戶的唯一識別碼 (`tenants.uid`)
+        reason:
+          type: string
+          maxLength: 255
+          description: 切換原因，會被寫入 `account_activity_logs`
+        sessionUid:
+          type: string
+          format: uuid
+          description: 指定要更新的 Session，預設為目前 Access Token 的 Session
+    SelectTenantResponse:
+      type: object
+      required:
+        - tenant
+        - tokens
+        - selectedAt
+      properties:
+        tenant:
+          $ref: "#/components/schemas/TenantSummary"
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+        selectedAt:
+          type: string
+          format: date-time
+          description: 完成租戶切換的時間
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        grantType:
+          type: string
+          description: 指定 Token 類型，目前僅支援 REFRESH_TOKEN
+        refreshToken:
+          type: string
+          description: Refresh Token
+    #        clientId:
+    #          type: string
+    #        scope:
+    #          type: string
+    #          description: 若未提供則沿用原有 Scope
+    RefreshTokenResponse:
+      type: object
+      required:
+        - tokens
+      properties:
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+    AccountProfile:
+      type: object
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+      required:
+        - accountUid
+        - username
+        - contactName
+        - email
+        - enabled
+        - role
+      properties:
+        accountUid:
+          type: string
+          format: uuid
+          description: 帳號鍵值
+        tenantUid:
+          type: string
+          format: uuid
+          description: 單位(租戶)名稱所屬鍵值(租戶鍵值)
+        tenantName:
+          type: string
+          description: 單位名稱
+        username:
+          type: string
+          description: 帳號
+        contactName:
+          type: string
+          description: 聯絡人姓名
+        email:
+          type: string
+          format: email
+          description: 帳號電子郵件
+        enabled:
+          type: boolean
+          description: 帳號啟用狀態
+        role:
+          $ref: "#/components/schemas/RoleSummary"
+        permissions:
+          type: array
+          items:
+            type: string
+          description: 權限代碼清單
+        lastLoginAt:
+          type: string
+          format: date-time
+          description: 最後登入時間
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 最後更新時間
+    RoleSummary:
+      type: object
+      description: 對應 `roles` 資料表
+      properties:
+        roleUid:
+          type: string
+          format: uuid
+          description: 角色鍵值
+        name:
+          type: string
+          description: 角色名稱
+        type:
+          type: string
+          description: |
+            角色類型:
+            * 平臺管理員：SUPER_ADMIN
+            * 管理員：ADMIN
+            * 使用者：OPERATOR
+        description:
+          type: string
+          description: 角色說明
+    UpdateAccountProfileRequest:
+      type: object
+      description: |
+        允許維護個人欄位，欄位設計參考 BDD「編輯現有使用者帳號」情境。
+      required:
+        - contactName
+        - email
+      properties:
+        contactName:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+    #        customerName:
+    #          type: string
+    #        locale:
+    #          type: string
+    #          example: zh-TW
+    #        timeZone:
+    #          type: string
+    #          example: Asia/Taipei
+    #        notificationChannels:
+    #          type: array
+    #          items:
+    #            type: string
+    #            enum:
+    #              - EMAIL
+    #              - SMS
+    #              - INBOX
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+        - newPasswordConfirm
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          description: 至少 12 碼並符合複雜度
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{12,64}$'
+        newPasswordConfirm:
+          type: string
+          format: password
+          description: 必須與 `newPassword` 相同
+    ResetPasswordRequest:
+      type: object
+      description: |
+        忘記密碼流程使用的 Reset Token 驗證請求者身分，並設定新密碼。成功後需在
+        `account_password_events` 記錄結果並使 Token 作廢。
+      required:
+        - token
+        - newPassword
+        - newPasswordConfirm
+      properties:
+        token:
+          type: string
+          format: uuid
+          description: 忘記密碼連結中的 Reset Token (`account_password_events.reset_token`)
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{12,64}$'
+          description: 新密碼需符合複雜度規則
+        newPasswordConfirm:
+          type: string
+          format: password
+          description: 必須與 `newPassword` 相同

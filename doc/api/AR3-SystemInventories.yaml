@@ -1,0 +1,454 @@
+openapi: 3.1.0
+info:
+  title: AR3-SystemInventories 資通系統清冊管理
+  description: |
+    ## API 清單
+    * AR3-SystemInventories-Export 匯出資通系統清冊
+
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey、AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/資通系統清冊管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/system-inventories"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: "https://www.autorisk365.com"
+      version:
+        description: 版號
+        default: "v1"
+tags:
+  - name: SystemInventories
+    description: 資通系統年度清冊與防護等級維護
+security:
+  - bearerAuth: []
+paths:
+  /export:
+    get:
+      tags:
+        - SystemInventories
+      summary: 匯出資通系統清冊
+      operationId: AR3-SystemInventories-Export
+      description: |
+        對應 `docs/features/資通系統清冊管理.feature` 的「匯出資通系統清冊」情境。
+        依目前查詢條件 (年度、系統名稱、防護等級) 產出 XLSX 檔案供下載。
+        若無提供過濾條件則匯出符合 `X-Tenant-Uid` 的全部資料；平臺管理員在未
+        指定 Header 時可輸出授權範圍內的所有租戶資料。系統應記錄匯出請求至
+        `public.account_activity_logs` 包含下載者、來源 IP 與條件，以利稽核。
+        需具備 `SYSTEM_INVENTORY:EXPORT` 權限。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/InventoryYearFilterParam"
+        - $ref: "#/components/parameters/SystemNameFilterParam"
+        - $ref: "#/components/parameters/ProtectionLevelFilterParam"
+      x-related-tables:
+        - public.system_inventories
+        - public.information_systems
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 依條件產製的清冊檔案 (預設 XLSX)
+          headers:
+            Content-Disposition:
+              description: 命名格式 `資通系統清冊-{yyyyMMdd}.xlsx`
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Uid
+      in: header
+      description: 指定租戶識別碼 (`system_inventories.tenant_uid`)。雖是非必填，但建議提供以提升防呆安全性(尤其是平台管理員在跨租戶操作時)。
+      required: false
+      schema:
+        type: string
+        format: uuid
+    InventoryYearFilterParam:
+      name: inventoryYear
+      in: query
+      description: 依清冊年份 (西元年，例如 2025) 篩選，對應 `system_inventories.inventory_year`。
+      required: false
+      schema:
+        type: integer
+        minimum: 1900
+        maximum: 2100
+    SystemNameFilterParam:
+      name: systemName
+      in: query
+      description: 資通系統名稱關鍵字 (模糊比對 `information_systems.name`)。
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    ProtectionLevelFilterParam:
+      name: protectionLevel
+      in: query
+      description: 依年度防護等級篩選，對應 `system_inventories.protection_level`。
+      required: false
+      schema:
+        $ref: "#/components/schemas/ProtectionLevel"
+    FormNumberFilterParam:
+      name: formNumber
+      in: query
+      description: 依表單編號完全比對，對應 `system_inventories.form_number`。
+      required: false
+      schema:
+        type: string
+        maxLength: 50
+    SortByParam:
+      name: sortBy
+      in: query
+      description: 排序欄位，預設 `inventoryDate`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - createdAt
+          - inventoryYear
+          - inventoryDate
+          - protectionLevel
+          - informationSystem
+        default: inventoryDate
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      description: 排序方向，預設 `DESC`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+        default: DESC
+    LimitParam:
+      name: limit
+      in: query
+      description: 回傳筆數上限，預設 20，最大 100。
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    OffsetParam:
+      name: offset
+      in: query
+      description: 查詢位移量，搭配 `limit` 使用。
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    InventoryIdPathParam:
+      name: inventoryId
+      in: path
+      description: 清冊唯一識別碼 (`system_inventories.uid`)。
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突 (例如清冊年份重複或系統不屬於相同租戶)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnprocessableEntity:
+      description: 無法處理的請求 (例如該系統尚無防護等級評估紀錄)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+        code:
+          type: string
+          description: 系統定義錯誤代碼 (例如 `SYSTEM_INVENTORY_NOT_FOUND`)。
+        message:
+          type: string
+        path:
+          type: string
+          description: 觸發錯誤的 API 路徑
+        traceId:
+          type: string
+          description: 方便串接觀察性的追蹤 Id
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）。
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    Paging:
+      description: 分頁資訊
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    ProtectionLevel:
+      type: string
+      description: 防護需求等級，對應 `system_inventories.protection_level`。
+      enum:
+        - HIGH
+        - MEDIUM
+        - LOW
+    TenantSummary:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+    InformationSystemSummary:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isSharedSystem:
+          type: boolean
+          description: 是否為共同性系統，來源自 `information_systems.is_shared_system`。
+        vendorName:
+          type: string
+          description: 維護/開發商名稱，來源自 `information_systems.vendor_name`。
+    AccountSummary:
+      type: object
+      required:
+        - uid
+        - username
+      properties:
+        uid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+          description: 來源自 `accounts.contact_name`。
+    SystemInventorySummary:
+      type: object
+      required:
+        - uid
+        - inventoryYear
+        - inventoryDate
+        - protectionLevel
+        - informationSystem
+        - createdAt
+      properties:
+        uid:
+          type: string
+          format: uuid
+        #        tenant:
+        #          $ref: '#/components/schemas/TenantSummary'
+        #        formNumber:
+        #          type: string
+        #          description: 後端產生的表單編號 (對應 `form_number`)。
+        informationSystem:
+          $ref: "#/components/schemas/InformationSystemSummary"
+        inventoryYear:
+          type: integer
+          description: 西元年，儲存在 `system_inventories.inventory_year`。
+        inventoryDate:
+          type: string
+          format: date
+          description: 盤點日期 (ISO 8601 格式，如 2025-01-15)，儲存在 `system_inventories.inventory_date`。
+        protectionLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    SystemInventoryDetail:
+      required:
+        - formNumber
+      allOf:
+        - $ref: "#/components/schemas/SystemInventorySummary"
+        - type: object
+          properties:
+            formNumber:
+              type: string
+              description: 後端產生的表單編號 (對應 `form_number`)。
+            createdBy:
+              $ref: "#/components/schemas/AccountSummary"
+            updatedBy:
+              $ref: "#/components/schemas/AccountSummary"
+    ListSystemInventoriesResponse:
+      type: object
+      required:
+        - paging
+        - items
+      properties:
+        paging:
+          $ref: "#/components/schemas/Paging"
+        items:
+          type: array
+          items:
+            - $ref: "#/components/schemas/SystemInventorySummary"
+            - type: object
+              property:
+                formNumber:
+                  type: string
+                  description: 後端產生的表單編號 (對應 `form_number`)。
+    CreateSystemInventoryRequest:
+      type: object
+      description: 新增資通系統清冊的請求內容。
+      required:
+        #        - inventoryYear
+        - inventoryDate
+        - systemUid
+      properties:
+        #        inventoryYear:
+        #          type: integer
+        #          description: 清冊年份 (西元年，如 2025)。
+        #          minimum: 1900
+        #          maximum: 2100
+        inventoryDate:
+          type: string
+          format: date
+          description: 盤點日期 (ISO 8601 格式，如 2025-01-15)。
+        systemUid:
+          type: string
+          format: uuid
+          description: 資通系統識別碼，須為既有的 `information_systems.uid`。
+        notes:
+          type: string
+          maxLength: 2000
+          description: 年度註記 (選填)。
+    UpdateSystemInventoriesRequest:
+      type: object
+      description: 更新資通系統清冊的內容。
+      properties:
+        #        inventoryYear:
+        #          type: integer
+        #          description: 清冊年份 (西元年，如 2025)。
+        #          minimum: 1900
+        #          maximum: 2100
+        inventoryDate:
+          type: string
+          format: date
+          description: 盤點日期 (ISO 8601 格式，如 2025-01-15)。
+        systemUid:
+          type: string
+          format: uuid
+          description: 資通系統識別碼。
+        notes:
+          type: string
+          maxLength: 2000

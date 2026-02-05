@@ -1,0 +1,893 @@
+openapi: 3.1.0
+info:
+  title: AR3-SystemChecklists 資通系統防護基準檢核表管理
+  description: |
+    ## API 清單
+    * AR3-SystemChecklists-Search 查詢資通系統防護基準檢核表列表
+    * AR3-SystemChecklists-Read 查詢單一資通系統的防護基準檢核表
+    * AR3-SystemChecklists-Update 更新資通系統防護基準檢核表
+    * AR3-SystemChecklists-Export 匯出資通系統防護基準檢核表
+    * AR3-SystemChecklists-ExportSummary 匯出資通系統防護基準評鑑結果分析
+
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey、AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/資通系統防護基準檢核表管理.feature`
+    * 原型頁面：`prototype/system_checklist.html`, `prototype/system_checklist_add.html`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/system-checklists"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: "https://www.autorisk365.com"
+      version:
+        description: 版號
+        default: "v1"
+tags:
+  - name: SystemChecklists
+    description: 資通系統防護基準檢核表維護與匯出
+security:
+  - bearerAuth: []
+paths:
+  /:
+    #    post:
+    #      tags:
+    #        - SystemChecklists
+    #      summary: 新增資通系統防護基準檢核表
+    #      operationId: AR3-SystemChecklists-Create
+    #      description: |
+    #        對應原型 `prototype/system_checklist_add.html` 的新增功能。
+    #        建立新的檢核表時，系統會依據指定的資通系統 (system_uid) 自動帶入：
+    #        - 資通系統名稱
+    #        - 資通系統防護安全等級 (來自最新的評估記錄 information_systems.protection_level)
+    #        - 資通系統維護/開發商 (來自 information_systems.vendor_name)
+    #        - 資通系統是否為共用系統 (information_systems.is_shared_system)
+    #        表單編號 (form_number) 由系統自動產生。
+    #      requestBody:
+    #        required: true
+    #        content:
+    #          application/json:
+    #            schema:
+    #              $ref: '#/components/schemas/CreateSystemChecklistRequest'
+    #      x-related-tables:
+    #        - public.system_checklists
+    #        - public.system_checklist_controls
+    #        - public.information_systems
+    #        - public.security_controls
+    #        - public.account_activity_logs
+    #      responses:
+    #        '201':
+    #          description: 成功建立檢核表
+    #          content:
+    #            application/json:
+    #              schema:
+    #                $ref: '#/components/schemas/SystemChecklistDetail'
+    #        '400':
+    #          $ref: '#/components/responses/BadRequest'
+    #        '401':
+    #          $ref: '#/components/responses/Unauthorized'
+    #        '403':
+    #          $ref: '#/components/responses/Forbidden'
+    #        '409':
+    #          $ref: '#/components/responses/Conflict'
+    #        '500':
+    #          $ref: '#/components/responses/ServerError'
+    get:
+      tags:
+        - SystemChecklists
+      summary: 查詢資通系統防護基準檢核表列表
+      operationId: AR3-SystemChecklists-Search
+      description: |
+        對應原型 `prototype/system_checklist.html` 的查詢功能。
+        查詢結果以「防護基準檢核表 (system_checklists)」為主表，回傳列表包含：
+        年度、表單編號、評估日期、資通系統名稱、資通系統防護安全等級。
+        可依年度、系統名稱、防護等級過濾，並提供分頁功能。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AssessmentYearFilterParam"
+        - $ref: "#/components/parameters/SystemNameFilterParam"
+        - $ref: "#/components/parameters/ProtectionLevelFilterParam"
+        - $ref: "#/components/parameters/FormNumberFilterParam"
+        - $ref: "#/components/parameters/AssessmentStatusFilterParam"
+        - $ref: "#/components/parameters/SortByParam"
+        - $ref: "#/components/parameters/SortOrderParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      x-related-tables:
+        - public.system_checklists
+        - public.information_systems
+        - public.tenants
+      responses:
+        "200":
+          description: 依條件過濾後的防護基準檢核表列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSystemChecklistsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /{checklistUid}:
+    get:
+      tags:
+        - SystemChecklists
+      summary: 查詢單一資通系統的防護基準檢核表
+      operationId: AR3-SystemChecklists-Read
+      description: |
+        對應原型 `prototype/system_checklist_add.html` 的編輯畫面載入。
+        依主表 `system_checklists.uid` 取得檢核表抬頭資訊：
+        - 年度、評估日期、資通系統名稱、資通系統防護安全等級
+        - 資通系統維護/開發商 (來自 information_systems.vendor_name)
+        - 承辦單位、承辦人姓名
+        以及子表 `system_checklist_controls` 中所有控制項的詳細檢核結果。
+        若檢核表不存在或不屬於目前租戶則回傳 404。
+      parameters:
+        - $ref: "#/components/parameters/ChecklistIdPathParam"
+      x-related-tables:
+        - public.system_checklists
+        - public.system_checklist_controls
+        - public.information_systems
+        - public.security_controls
+        - public.security_control_criteria
+        - public.tenants
+        - public.accounts
+      responses:
+        "200":
+          description: 指定檢核表的詳細內容 (含子表控制項)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemChecklistDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - SystemChecklists
+      summary: 更新資通系統防護基準檢核表
+      operationId: AR3-SystemChecklists-Update
+      description: |
+        對應原型 `prototype/system_checklist_add.html` 的「送出」按鈕。
+        更新檢核表抬頭欄位 (評估日期、承辦單位、承辦人姓名) 與所有檢核項目的狀態及備註。
+
+        評估結果選項對應：
+        - 符合 → COMPLIANT
+        - 不符合 → NON_COMPLIANT
+        - 部分符合 → PARTIALLY_COMPLIANT
+        - 不適用 → NOT_APPLICABLE
+        - 其他 → OTHER
+
+        後端需驗證所有子項目屬於該檢核表與租戶；若無符合者回傳 404，
+        若關聯的資通系統已被刪除，則不允許更新並回傳 400，
+        並將異動寫入 `public.account_activity_logs`。
+      parameters:
+        - $ref: "#/components/parameters/ChecklistIdPathParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSystemChecklistRequest"
+      x-related-tables:
+        - public.system_checklists
+        - public.system_checklist_controls
+        - public.security_controls
+        - public.security_control_criteria
+        - public.accounts
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 更新後的檢核表內容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemChecklistDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  #    delete:
+  #      tags:
+  #        - SystemChecklists
+  #      summary: 刪除資通系統防護基準檢核表
+  #      operationId: AR3-SystemChecklists-Delete
+  #      description: |
+  #        對應原型 `prototype/system_checklist.html` 的刪除功能。
+  #        刪除指定的檢核表及其所有子項目 (system_checklist_controls)。
+  #        若檢核表不存在或不屬於目前租戶則回傳 404，
+  #        並將刪除行為寫入 `public.account_activity_logs`。
+  #      parameters:
+  #        - $ref: '#/components/parameters/ChecklistIdPathParam'
+  #      x-related-tables:
+  #        - public.system_checklists
+  #        - public.system_checklist_controls
+  #        - public.account_activity_logs
+  #      responses:
+  #        '204':
+  #          description: 成功刪除檢核表
+  #        '401':
+  #          $ref: '#/components/responses/Unauthorized'
+  #        '403':
+  #          $ref: '#/components/responses/Forbidden'
+  #        '404':
+  #          $ref: '#/components/responses/NotFound'
+  #        '500':
+  #          $ref: '#/components/responses/ServerError'
+  /export:
+    get:
+      tags:
+        - SystemChecklists
+      summary: 匯出資通系統防護基準檢核表
+      operationId: AR3-SystemChecklists-Export
+      description: |
+        對應原型 `prototype/system_checklist.html` 的「匯出資通系統防護基準檢核表」按鈕。
+        依查詢鍵值輸出 XLSX 檔案，每筆列出檢核表抬頭資訊與子表控制項結果，
+        並記錄匯出行為於 `public.account_activity_logs`。
+        需具備 `SYSTEM_CHECKLIST:EXPORT` 權限。
+      parameters:
+        - $ref: "#/components/parameters/ChecklistUidFilterParam"
+      x-related-tables:
+        - public.system_checklists
+        - public.system_checklist_controls
+        - public.information_systems
+        - public.security_controls
+        - public.security_control_criteria
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 依條件產製的檢核表檔案 (XLSX)
+          headers:
+            Content-Disposition:
+              description: 檔名格式： `資通系統防護基準檢核表_{formNumber}.xlsx`
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /export-summary:
+    get:
+      tags:
+        - SystemChecklists
+      summary: 匯出資通系統防護基準評鑑結果分析
+      operationId: AR3-SystemChecklists-ExportSummary
+      description: |
+        對應原型 `prototype/system_checklist.html` 的「匯出資通系統防護基準評鑑結果分析」按鈕。
+        依篩選條件匯出控制措施 × 系統的矩陣結果，供橫向比較與彙整分析。
+        需具備 `SYSTEM_CHECKLIST:EXPORT` 權限。
+      parameters:
+        - $ref: "#/components/parameters/AssessmentYearFilterParam"
+        - $ref: "#/components/parameters/SystemNameFilterParam"
+      x-related-tables:
+        - public.system_checklists
+        - public.system_checklist_controls
+        - public.security_controls
+        - public.security_control_criteria
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 指定年度的評鑑結果分析檔案
+          headers:
+            Content-Disposition:
+              description: 命名建議 `資通系統防護基準評鑑結果-{yyyyMMdd}.xlsx`
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ChecklistUidFilterParam:
+      name: checklistUid
+      in: query
+      description: 防護基準檢核表鍵值。
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AssessmentYearFilterParam:
+      name: assessmentYear
+      in: query
+      description: 依檢核年度 (西元年) 篩選，對應 `system_checklists.assessment_year`。
+      required: false
+      schema:
+        type: integer
+        minimum: 1900
+        maximum: 2100
+    AssessmentYearRequiredParam:
+      name: assessmentYear
+      in: query
+      description: 指定要匯出的檢核年度 (必填)。
+      required: true
+      schema:
+        type: integer
+        minimum: 1900
+        maximum: 2100
+    SystemNameFilterParam:
+      name: systemName
+      in: query
+      description: 依資通系統名稱模糊查詢，對應 `system_checklists.snapshot_system_name`。
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    ProtectionLevelFilterParam:
+      name: protectionLevel
+      in: query
+      description: |
+        依資通系統防護等級篩選，來源 `information_systems.protection_level`。
+        對應原型下拉選項：普(LOW)、中(MEDIUM)、高(HIGH)。
+      required: false
+      schema:
+        $ref: "#/components/schemas/ProtectionLevel"
+    FormNumberFilterParam:
+      name: formNumber
+      in: query
+      description: 依表單編號完全比對，對應 `system_checklists.form_number`。
+      required: false
+      schema:
+        type: string
+        maxLength: 50
+    AssessmentStatusFilterParam:
+      name: assessmentStatus
+      in: query
+      description: 評估狀態，對應 `system_checklists.assessment_status`。
+      required: false
+      schema:
+        type: string
+    SortByParam:
+      name: sortBy
+      in: query
+      description: 排序欄位，預設為 `assessmentDate`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - assessmentDate
+          - formNumber
+          - assessmentYear
+          - assessmentStatus
+        default: assessmentDate
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      description: 排序方向，預設為 `DESC` (由新到舊)。
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+        default: DESC
+    LimitParam:
+      name: limit
+      in: query
+      description: 回傳筆數上限，預設 10，最大 100。對應原型每頁筆數選擇 (10/30/50)。
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    OffsetParam:
+      name: offset
+      in: query
+      description: 查詢位移量，搭配 `limit` 使用。
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    ChecklistIdPathParam:
+      name: checklistUid
+      in: path
+      description: 防護基準檢核表唯一識別碼 (`system_checklists.uid`)。
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突 (例如同系統同年度已存在檢核表)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+        code:
+          type: string
+          description: 系統定義錯誤代碼 (例如 `SYSTEM_CHECKLIST_NOT_FOUND`)。
+        message:
+          type: string
+        path:
+          type: string
+          description: 觸發錯誤的 API 路徑
+        traceId:
+          type: string
+          description: 方便串接觀察性的追蹤 Id
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）。
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    Paging:
+      description: 分頁資訊
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    ProtectionLevel:
+      type: string
+      description: |
+        資通系統防護等級，對應 `protection_level_assessments.overall_level`。
+        原型下拉選項對應：高(HIGH)、中(MEDIUM)、普(LOW)。
+      enum:
+        - HIGH
+        - MEDIUM
+        - LOW
+    ControlStatus:
+      type: string
+      description: |
+        檢核狀態，對應 `system_checklist_controls.status`。
+        原型評估結果選項對應：
+        - 符合 → COMPLIANT
+        - 不符合 → NON_COMPLIANT
+        - 部分符合 → PARTIALLY_COMPLIANT
+        - 不適用 → NOT_APPLICABLE
+        - 其他 → OTHER
+      enum:
+        - COMPLIANT
+        - NON_COMPLIANT
+        - PARTIALLY_COMPLIANT
+        - NOT_APPLICABLE
+        - OTHER
+    InformationSystemSummary:
+      type: object
+      description: |
+        資通系統摘要資訊。
+      required:
+        - uid
+        - name
+        - code
+        - protectionLevel
+        - isSharedSystem
+        - vendorName
+        - status
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: 資通系統名稱，對應 `information_systems.name`。
+        code:
+          type: string
+          description: 資通系統代碼，對應 `information_systems.code`。
+        protectionLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        protectionLevelDisplayName:
+          type: string
+          description: 資通系統防護需求等級顯示名稱。
+        isSharedSystem:
+          type: boolean
+          description: 共同性系統，對應 `information_systems.is_shared_system`。選擇系統後自動帶出。
+        vendorName:
+          type: string
+          nullable: true
+          description: 資通系統維護/開發商，對應 `information_systems.vendor_name`。選擇系統後自動帶出。
+        handlingUnit:
+          type: string
+          description: 承辦單位
+          nullable: true
+        handlerName:
+          type: string
+          description: 承辦人姓名
+          nullable: true
+        status:
+          type: string
+          description: 啟用狀態 (ENABLED/DISABLED)
+          enum:
+            - ENABLED
+            - DISABLED
+    SystemChecklistSummary:
+      type: object
+      description: 檢核表列表項目，對應原型表格的一列資料。
+      required:
+        - uid
+        - assessmentYear
+        - formNumber
+        - assessmentDate
+        - informationSystem
+        - assessmentStatus
+      properties:
+        uid:
+          type: string
+          format: uuid
+          description: 檢核表唯一識別碼，對應 `system_checklists.uid`。
+        assessmentYear:
+          type: integer
+          description: 年度，對應 `system_checklists.assessment_year`。
+        formNumber:
+          type: string
+          description: 表單編號，對應 `system_checklists.form_number`。
+        assessmentDate:
+          type: string
+          format: date
+          nullable: true
+          description: 評估日期，對應 `system_checklists.assessment_date`。
+        assessmentStatus:
+          type: string
+          description: 評估狀態，對應 `system_checklists.assessment_status`。
+        assessmentStatusDisplayName:
+          type: string
+          description: 評估狀態顯示文字。
+        snapshotInformationSystem:
+          description: 資訊系統快照，對應 `system_checklists.snapshot_information_system`。
+          $ref: "#/components/schemas/InformationSystemSummary"
+        informationSystem:
+          $ref: "#/components/schemas/InformationSystemSummary"
+    ChecklistControlItemBasic:
+      type: object
+      properties:
+        controlCode:
+          type: string
+          description: 控制措施項目代碼，對應 `system_checklist_controls.control_code`。
+        status:
+          $ref: "#/components/schemas/ControlStatus"
+          description: 檢核狀態，對應 `system_checklist_controls.status`。若帶入null值，則系統自動替換為 OTHER，並於備註欄位填入「未評估」。
+          example: COMPLIANT
+          nullable: true
+        notes:
+          type: string
+          description: 備註說明，對應原型「備註說明」欄位。對應 `system_checklist_controls.notes`。
+          nullable: true
+    ChecklistControlItem:
+      type: object
+      description: 檢核表控制項項目，對應原型表格中的一列控制措施。
+      required:
+        - uid
+        - controlCode
+      allOf:
+        - $ref: "#/components/schemas/ChecklistControlItemBasic"
+        - type: object
+          properties:
+            uid:
+              type: string
+              format: uuid
+              description: 檢核控制項唯一識別碼，對應 `system_checklist_controls.uid`。
+            name:
+              type: string
+              description: 控制措施項目名稱，對應 `security_controls.name`。
+            family:
+              type: string
+              description: 控制措施項目構面，對應 `security_controls.family`。
+            criteriaContents:
+              type: array
+              items:
+                type: string
+                description: 控制措施項目內容，對應 `security_control_criteria.criteria_content`。
+    ChecklistControlTree:
+      type: object
+      properties:
+        family:
+          type: string
+          description: 控制措施構面。例如：存取控制、稽核與可歸責性、系統與服務獲得。對應 `security_controls.family`。
+          minLength: 1
+          maxLength: 100
+        controls:
+          type: array
+          description: 控制措施項目清單。例如：帳號管理、最小權限、遠端存取。
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ChecklistControlItemBasic"
+              - type: object
+                properties:
+                  uid:
+                    type: string
+                    format: uuid
+                    description: 檢核控制項唯一識別碼，對應 `system_checklist_controls.uid`。
+                  name:
+                    type: string
+                    description: 控制措施項目名稱，對應 `security_controls.name`。
+                    minLength: 1
+                    maxLength: 255
+                  criteriaContents:
+                    description: 控制措施分級內容清單
+                    type: array
+                    items:
+                      type: string
+                      description: 包含等級資訊的控制措施內容。
+                      example:
+                        - 建立帳號管理機制，包含帳號之申請、開通、停用及刪除之程序。 [普]
+                        - 已逾期之臨時或緊急帳號應刪除或禁用。 [中]
+                        - 資通系統閒置帳號應禁用。 [中]
+                        - 定期審核資通系統帳號之建立、修改、啟用、禁用及刪除。 [中]
+                        - 逾越機關所定預期閒置時間或可使用期限時，系統應自動將使用者登出。 [高]
+                        - 應依機關規定之情況及條件，使用資通系統。 [高]
+                        - 監控資通系統帳號，如發現帳號違常使用時回報管理者。 [高]
+        isoStandard:
+          type: string
+          description: ISO版本。例如：ISO/IEC 27001:2013
+          minLength: 1
+          maxLength: 50
+    #    SecurityControlCriteria:
+    #      description: 資通系統防護基準控制措施分級項目
+    #      type: object
+    #      required:
+    #        - criteriaLevel
+    #        - criteriaContent
+    #      properties:
+    #        criteriaLevel:
+    #          type: string
+    #          description: 控制措施分級等級
+    #          enum:
+    #            - LOW
+    #            - MEDIUM
+    #            - HIGH
+    #          example: LOW
+    #        criteriaContent:
+    #          type: string
+    #          description: 控制措施分級具體內容
+    #          minLength: 1
+    #          example: 建立帳號管理機制，包含帳號之申請、開通、停用及刪除之程序。
+    SystemChecklistDetail:
+      type: object
+      description: 檢核表詳細內容，對應原型編輯畫面的完整資料。
+      required:
+        - uid
+        - assessmentYear
+        - formNumber
+        - assessmentDate
+        - snapshotLevel
+        - system
+        - controlItems
+      properties:
+        uid:
+          type: string
+          format: uuid
+        assessmentYear:
+          type: integer
+          description: 年度，對應 `system_checklists.assessment_year`。原型為唯讀欄位。
+        formNumber:
+          type: string
+          description: 表單編號，對應 `system_checklists.form_number`。
+        snapshotLevel:
+          allOf:
+            - $ref: "#/components/schemas/ProtectionLevel"
+          description: 評估建立時當下的資通系統防護等級，對應 `system_checklists.snapshot_level`。
+        snapshotLevelDisplayName:
+          type: string
+          description: 評估建立時當下的資通系統防護等級顯示文字。
+        assessmentDate:
+          type: string
+          format: date
+          description: 評估日期，對應 `system_checklists.assessment_date`。原型為可編輯日期欄位。
+        assessmentStatus:
+          type: string
+          description: 評估狀態，對應 `system_checklists.assessment_status`。
+        assessmentStatusDisplayName:
+          type: string
+          description: 評估狀態顯示文字。
+        snapshotInformationSystem:
+          description: 評估建立時當下的資通系統資訊，對應 `system_checklists.snapshot_information_system`。
+          $ref: "#/components/schemas/InformationSystemSummary"
+        informationSystem:
+          description: 當下的資通系統資訊，對應 `system_checklists.information_system`。
+          $ref: "#/components/schemas/InformationSystemSummary"
+        controlItems:
+          type: array
+          description: 檢核控制項列表。
+          items:
+            $ref: "#/components/schemas/ChecklistControlTree"
+        #            $ref: '#/components/schemas/ChecklistControlItem'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    #        protectionLevelAssessmentUid:
+    #          type: string
+    #          format: uuid
+    #          description: 評估建立時當下的資通系統防護等級評估表 UID，對應 `system_checklists.protection_level_assessment_uid`。
+    ListSystemChecklistsResponse:
+      type: object
+      description: 檢核表列表查詢回應。
+      required:
+        - paging
+        - items
+      properties:
+        paging:
+          $ref: "#/components/schemas/Paging"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemChecklistSummary"
+    CreateSystemChecklistRequest:
+      type: object
+      description: |
+        新增檢核表請求，對應原型 `prototype/system_checklist_add.html` 的新增表單。
+        - 年度：唯讀，由 assessmentYear 參數帶入
+        - 評估日期：可編輯日期欄位
+        - 資通系統名稱：下拉選單，由 systemUid 參數帶入
+        - 資通系統防護安全等級：選擇系統後自動帶出
+        - 資通系統維護/開發商：選擇系統後自動帶出
+        - 承辦單位：選擇系統後自動帶出
+        - 承辦人姓名：選擇系統後自動帶出
+      required:
+        - systemUid
+        - assessmentDate
+        - controlItems
+      properties:
+        systemUid:
+          type: string
+          format: uuid
+          description: 資通系統唯一識別碼，對應原型「資通系統名稱」下拉選單。
+        assessmentDate:
+          type: string
+          format: date
+          description: 評估日期，對應原型「評估日期」欄位。
+        controlItems:
+          type: array
+          description: 控制項評估列表，對應原型表格中的評估結果與備註。
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ChecklistControlItemBasic"
+    UpdateChecklistControlItem:
+      type: object
+      required:
+        - uid
+        - status
+      properties:
+        uid:
+          type: string
+          format: uuid
+          description: 檢核控制項唯一識別碼，對應 `system_checklist_controls.uid`。
+        status:
+          $ref: "#/components/schemas/ControlStatus"
+        notes:
+          type: string
+          description: 備註說明。
+          nullable: true
+    UpdateSystemChecklistRequest:
+      type: object
+      description: |
+        更新檢核表請求，對應原型 `prototype/system_checklist_add.html` 的「送出」操作。
+        至少提供一個欄位或一筆控制項更新。
+      minProperties: 1
+      properties:
+        assessmentDate:
+          type: string
+          format: date
+          description: 評估日期，對應原型「評估日期」欄位。
+        controlItems:
+          type: array
+          description: 控制項更新列表，對應原型表格中的評估結果與備註。
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/UpdateChecklistControlItem"

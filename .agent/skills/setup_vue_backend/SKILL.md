@@ -73,8 +73,8 @@ mkdir -p doc/api doc/feature
 
 ### 4. Configure Scripts
 
-Update your `package.json` to include the following scripts. 
-*Note: If `package.json` already has scripts, merge these in, carefully resolving conflicts.*
+Update your `package.json` to include the following scripts.
+_Note: If `package.json` already has scripts, merge these in, carefully resolving conflicts._
 
 ```json
 {

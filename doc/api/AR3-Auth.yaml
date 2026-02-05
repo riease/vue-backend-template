@@ -1,0 +1,1015 @@
+openapi: 3.1.0
+info:
+  title: AR3-Auth 身分驗證模組
+  description: |
+    ## API 清單 - 登入前
+    * AR3-Auth-SignIn 登入
+    * AR3-Auth-SignOut 登出
+    * AR3-Auth-Tokens 刷新 Token
+    * AR3-Auth-ForgotPassword 忘記密碼
+    * AR3-Auth-ResetPassword 重設密碼
+
+    ## API 清單 - 登入後
+    * AR3-Auth-SwitchTenant 切換代理租戶(租戶選擇器)
+
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，各 API Response Body 統一沿用 `ErrorResponse` 結構：
+
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey, AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/帳號管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/auth"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: https://www.autorisk365.com
+      version:
+        description: 版號
+        default: v1
+tags:
+  - name: Authentication
+    description: 登入、登出、Token 管理
+  - name: Switch Tenant
+    description: 以本人視角管理個人資料與密碼
+security:
+  - bearerAuth: []
+paths:
+  /sign-in:
+    post:
+      tags:
+        - Authentication
+      summary: 使用者登入
+      operationId: AR3-Auth-SignIn
+      description: |
+        驗證帳號與密碼並建立 Access/Refresh Token。成功登入會寫入 `account_tokens` 與 `account_activity_logs`
+        （參考 `docs/DB/database-schema.sql`），同時回傳目前登入者的 `accounts` 資料。登入請求僅需帳號、
+        密碼與驗證票證，平台管理員會在登入完成後透過「切換代理租戶」流程選擇租戶，其餘帳號則依 `accounts.tenant_uid`
+        決定登入租戶。
+
+        **安全性更新**: Refresh Token 透過 `HttpOnly`、`Secure`、`SameSite=Strict` 的 Cookie 傳遞（Cookie 名稱為 `refreshToken`，
+        路徑為 `/api/v1/auth`），不包含在回應 Body 中，以降低 XSS 攻擊風險。
+      security: []
+      x-related-tables:
+        - public.accounts
+        - public.account_tokens
+        - public.account_activity_logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+            examples:
+              passwordGrant:
+                summary: Portal 使用者登入
+                value:
+                  username: admin
+                  password: Pa55w0rd!
+                  cfToken: dummy_token
+      #                  rememberMe: true
+      responses:
+        "200":
+          description: |
+            成功登入並取得 Token 與個人資訊。
+            Refresh Token 透過 `Set-Cookie` Header 傳遞，屬性為 `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`。
+          headers:
+            Set-Cookie:
+              description: |
+                Refresh Token Cookie (`refreshToken`)，可供所有 `/api/v1/auth/*` 端點使用。
+                屬性：HttpOnly, Secure (生產環境), SameSite=Strict
+              schema:
+                type: string
+                example: refreshToken=eyJhbGc...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: 發送忘記密碼重設連結
+      operationId: AR3-Auth-ForgotPassword
+      description: |
+        依登入識別資訊尋找 `accounts`，若帳號存在則建立 `account_password_events` 的 FORGOT_PASSWORD 事件並生成
+        限時 Reset Token，透過電子郵件寄送重設連結。`identifier` 僅支援傳入帳號（對應 `accounts.username`），
+        前端可額外傳遞 `resetRedirectUrl` 導向指定重設頁面並使用 `locale` 控制郵件語系。即使查無帳號也會回應 202，
+        以避免洩漏帳號是否存在。為防止惡意濫用，請求需附帶 Turnstile 等驗證票證且伺服器需針對相同識別資訊
+        實作速率限制（超過限制時回應 429）。
+      security: []
+      x-related-tables:
+        - public.accounts
+        - public.account_password_events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            examples:
+              requestReset:
+                summary: 依帳號寄送忘記密碼信
+                value:
+                  identifier: admin
+                  cfToken: 3x00000000000000000000FF
+                  locale: zh-TW
+                  resetRedirectUrl: https://portal.autorisk365.com/reset-password
+      responses:
+        "202":
+          description: 接受忘記密碼請求，非同步寄出重設密碼通知
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: 使用 Reset Token 設定新密碼
+      operationId: AR3-Auth-ResetPassword
+      description: |
+        透過忘記密碼流程寄出的 Reset Token 驗證呼叫者身份，成功後更新 `accounts.password_hash` 並於
+        `account_password_events` 建立 RESET_PASSWORD 事件，並記錄執行來源以利稽核。Token 僅能使用一次，
+        若已失效或被使用需重新發送忘記密碼請求。回應採 204 + `Cache-Control: no-store`，避免敏感資訊被瀏覽器快取。
+      security: []
+      x-related-tables:
+        - public.accounts
+        - public.account_password_events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            examples:
+              resetByToken:
+                value:
+                  token: 0fda36a7-3bbd-4701-9e5c-73b5770ec0be
+                  newPassword: FreshPa55w0rd!
+                  newPasswordConfirm: FreshPa55w0rd!
+      responses:
+        "204":
+          description: 成功重設密碼，無內容
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /sign-out:
+    post:
+      tags:
+        - Authentication
+      summary: 登出並撤銷 Token
+      operationId: AR3-Auth-SignOut
+      description: |
+        使用 Access Token 身分登出。
+
+        **安全性更新**: 登出時會透過 `Set-Cookie` Header 清除 `refreshToken` Cookie（設定 `Max-Age=0`）。
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      x-related-tables:
+        - public.account_tokens
+        - public.account_activity_logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignOutRequest"
+      #            examples:
+      #              singleDevice:
+      #                summary: 登出
+      #                value:
+      #                  tokenId: 81a4a9c3-1a2e-4b66-b08c-3ef8f3c82491
+      #                  refreshToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      #                  allDevices: false
+      responses:
+        "200":
+          description: |
+            成功登出，所有相關 Token 已撤銷。
+            透過 `Set-Cookie` Header 清除 `refreshToken` Cookie。
+          headers:
+            Set-Cookie:
+              description: |
+                清除 Refresh Token Cookie，設定 `Max-Age=0`。
+              schema:
+                type: string
+                example: refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /tokens:
+    #    get:
+    #      tags:
+    #        - Authentication
+    #      summary: 查詢本人 Token 列表
+    #      operationId: AR3-Auth-Token
+    #      description: |
+    #        回傳 `account_tokens` 中尚未過期或最近已撤銷的 Token，可用於「強制登出其他裝置」等功能。
+    #        查詢結果包含 `token_id`、來源裝置、IP 與失效時間。支援依 Token 類型與是否包含已撤銷資料篩選。
+    #      parameters:
+    #        - $ref: '#/components/parameters/TenantHeader'
+    #        - name: tokenType
+    #          in: query
+    #          description: 篩選特定 Token 類型，預設列出 ACCESS 與 REFRESH。
+    #          schema:
+    #            type: string
+    #            enum:
+    #              - ACCESS
+    #              - REFRESH
+    #              - API_KEY
+    #        - name: includeRevoked
+    #          in: query
+    #          description: 是否一併回傳已撤銷 Token。
+    #          schema:
+    #            type: boolean
+    #            default: false
+    #        - name: limit
+    #          in: query
+    #          description: 每頁筆數，預設 20，最大 100。
+    #          schema:
+    #            type: integer
+    #            minimum: 1
+    #            maximum: 100
+    #            default: 20
+    #        - name: offset
+    #          in: query
+    #          description: 分頁位移量，搭配 `limit` 使用。
+    #          schema:
+    #            type: integer
+    #            minimum: 0
+    #            default: 0
+    #      x-related-tables:
+    #        - public.account_tokens
+    #      responses:
+    #        '200':
+    #          description: Token 清單
+    #          content:
+    #            application/json:
+    #              schema:
+    #                type: object
+    #                required:
+    #                  - total
+    #                  - items
+    #                properties:
+    #                  total:
+    #                    type: integer
+    #                    minimum: 0
+    #                  items:
+    #                    type: array
+    #                    items:
+    #                      $ref: '#/components/schemas/SessionToken'
+    #        '401':
+    #          $ref: '#/components/responses/Unauthorized'
+    #        '500':
+    #          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - Authentication
+      summary: 使用 Refresh Token 換發新的 Access Token
+      operationId: AR3-Auth-Tokens
+      description: |
+        驗證 Refresh Token 是否存在於 `account_tokens` 並未撤銷，若仍有效則同時換發新的 Access Token 及 Refresh Token。
+
+        **安全性更新**: Refresh Token 從 HttpOnly Cookie 中讀取（Cookie 名稱為 `refreshToken`，路徑為 `/api/v1/auth`），
+        新的 Refresh Token 也透過 `Set-Cookie` Header 傳遞，實作 Token Rotation 機制。
+      security: []
+      x-related-tables:
+        - public.account_tokens
+        - public.account_token_sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+            examples:
+              refresh:
+                value:
+                  grantType: REFRESH_TOKEN
+      #                  refreshToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      #                  clientId: portal.web
+      #                  scope: account:read account:write
+      responses:
+        "200":
+          description: |
+            成功換發新 Token。
+            新的 Refresh Token 透過 `Set-Cookie` Header 傳遞，屬性為 `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`。
+          headers:
+            Set-Cookie:
+              description: |
+                新的 Refresh Token Cookie (`refreshToken`)，覆蓋舊的 Cookie。
+                屬性：HttpOnly, Secure (生產環境), SameSite=Strict
+              schema:
+                type: string
+                example: refreshToken=eyJhbGc...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /switch-tenant:
+    post:
+      tags:
+        - Switch Tenant
+      summary: 切換擇代理租戶
+      operationId: AR3-Auth-SwitchTenant
+      description: |
+        讓具備平台管理員權限的使用者切換支援中的租戶身分，後端會驗證 `tenantUid`
+        是否存在於 `tenants` 並檢查呼叫者的角色。成功後會產生一組帶有新租戶宣告的
+        Token Pair，並記錄租戶代理事件於 `account_activity_logs`。
+        此流程對應 `docs/features/README.md` 中「平臺管理員」需先切換租戶才能操作的需求。
+
+        **安全性更新**: 新的 Refresh Token 透過 `HttpOnly` Cookie 傳遞，不包含在回應 Body 中。  
+        **重要**：平台管理員完成帳密驗證後，必須先利用租戶選擇器完成代理租戶選擇後才能呼叫其它功能的API。選擇租戶後取得的accessToken會包含該租戶的資訊。
+      x-related-tables:
+        - public.tenants
+        - public.account_tokens
+        - public.account_activity_logs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SwitchTenantRequest"
+            examples:
+              selectForSupport:
+                summary: 代理特定租戶以進行支援
+                value:
+                  tenantUid: e9ea0f48-9e33-4a7d-9bf5-2f467e44f71f
+                  reason: 協助安控評估作業
+      responses:
+        "200":
+          description: |
+            切換成功並回傳新 Token 以及租戶摘要。
+            新的 Refresh Token 透過 `Set-Cookie` Header 傳遞。
+          headers:
+            Set-Cookie:
+              description: |
+                新的 Refresh Token Cookie (`refreshToken`)，覆蓋舊的 Cookie。
+                屬性：HttpOnly, Secure (生產環境), SameSite=Strict
+              schema:
+                type: string
+                example: refreshToken=eyJhbGc...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SelectTenantResponse"
+              examples:
+                selectedTenant:
+                  summary: 切換至指定租戶後取得新 Token
+                  value:
+                    tenant:
+                      tenantUid: e9ea0f48-9e33-4a7d-9bf5-2f467e44f71f
+                      name: 耐辰資訊
+                      code: NC-001
+                      status: ENABLED
+                    tokens:
+                      tokenType: Bearer
+                      accessToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                      accessTokenExpiresAt: 2024-05-10T09:00:00Z
+                      refreshToken: eyJjdHkiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+                      refreshTokenExpiresAt: 2024-05-17T09:00:00Z
+                      sessionUid: 5df81361-5d64-4f31-88a0-b9b6fa227e98
+                    selectedAt: 2024-05-10T08:55:00Z
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Uid
+      in: header
+      description: |
+        指定租戶識別碼，對應 `accounts.tenant_uid`。若為平台級帳號可省略。
+      schema:
+        type: string
+        format: uuid
+    offsetParam:
+      description: 查詢分頁的 offset。與 limit 搭配使用。
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        example: 0
+    limitParam:
+      description: 查詢分頁的 limit。與 offset 搭配使用。
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        example: 20
+    noCacheHeader:
+      name: Cache-Control
+      in: header
+      required: true
+      schema:
+        type: string
+        default: no-cache
+    jsonContentTypeHeader:
+      name: Content-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        default: application/json
+  headers:
+    NoStore:
+      description: 告知客戶端不得快取此回應
+      schema:
+        type: string
+        example: no-store
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源（例如 Token Id）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突（例如 Token 已撤銷或密碼未通過策略）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: 觸發濫用防護或速率限制
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ResponseBase:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: |
+            錯誤代碼: 
+            * `0` : 成功
+            * `1xxx` : 參數錯誤
+            * `2xxx` : 權限不合法或資料不存在
+            * `3xxx` : 系統異常
+        message:
+          type: string
+          description: 錯誤訊息
+    Paging:
+      description: 分頁資訊
+      type: object
+      properties:
+        offset:
+          description: 查詢分頁的 offset
+          type: integer
+        limit:
+          description: 查詢分頁的 limit
+          type: integer
+        total:
+          description: 資料總筆數
+          type: number
+    TimeRange:
+      description: 時間區間。有開始及結束時間。
+      type: object
+      properties:
+        startsAt:
+          description: 開始時間
+          type: string
+          format: date-time
+        endsAt:
+          description: 結束時間
+          type: string
+          format: date-time
+    #    SimpleResponse:
+    #      description: 只回應資料鍵值及名稱。
+    #      type: object
+    #      properties:
+    #        uid:
+    #          description: 鍵值
+    #          type: string
+    #          format: uuid
+    #        subject:
+    #          description: uid對應的標的的名稱
+    #          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+          description: HTTP 狀態描述
+        code:
+          type: string
+          description: 系統定義錯誤代碼（例如 `AUTH_INVALID_TOKEN`）
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+        path:
+          type: string
+          description: 觸發錯誤的 API 路徑
+        traceId:
+          type: string
+          description: 方便串接觀察性的追蹤 Id
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    ForgotPasswordRequest:
+      type: object
+      description: |
+        使用者發起忘記密碼，後端會依 `identifier` 尋找匹配的 `accounts`，若成立則建立
+        `account_password_events` FORGOT_PASSWORD 記錄並寄出含 Reset Token 的連結。
+      required:
+        - identifier
+        - cfToken
+      properties:
+        identifier:
+          type: string
+          maxLength: 255
+          description: 帳號（`accounts.username`），目前不支援以電子郵件尋找帳號
+        cfToken:
+          type: string
+          description: Turnstile / CAPTCHA 票證，避免惡意濫用
+        locale:
+          type: string
+          description: 控制郵件語系，預設 zh-TW
+          example: zh-TW
+          default: zh-TW
+        resetRedirectUrl:
+          type: string
+          format: uri
+          description: |
+            前端用於重設密碼的頁面，伺服器會在此 URI 後加上 `token` Query 參數後傳遞給使用者。
+    SignInRequest:
+      type: object
+      required:
+        - username
+        - password
+        - cfToken
+      properties:
+        username:
+          type: string
+          maxLength: 255
+          description: 登入帳號，對應 `accounts.username`
+        password:
+          type: string
+          format: password
+          minLength: 8
+        cfToken:
+          type: string
+          description: 前端驗證機制（如 Cloudflare Turnstile）的票證
+    #        clientId:
+    #          type: string
+    #          description: |
+    #            前端客戶端代碼，對應 `account_tokens.client_id`。建議使用 {channel}.{platform} 命名。
+    #          example: portal.web
+    #        audience:
+    #          type: string
+    #          description: |
+    #            Token 受眾，用於多系統串接，對應 `account_tokens.audience`。
+    #        scope:
+    #          type: string
+    #          description: "以空白分隔的權限列表，寫入 `account_tokens.scope`。"
+    #          example: account:read account:write
+    #        rememberMe:
+    #          type: boolean
+    #          default: false
+    #          description: 記住我，將 Refresh Token 有效期延長至 30 天
+    SignInResponse:
+      type: object
+      required:
+        - tokens
+        - profile
+      properties:
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+        profile:
+          $ref: "#/components/schemas/AccountProfile"
+    SignOutRequest:
+      type: object
+      properties:
+        sessionUid:
+          type: string
+          format: uuid
+          description: 授權會話的 Session ID
+    #        tokenId:
+    #          type: string
+    #          format: uuid
+    #          description: 欲撤銷的 Session Token Id (`account_tokens.token_id`)
+    #        refreshToken:
+    #          type: string
+    #          description: 搭配 Token Id 進行雙重驗證
+    TokenPair:
+      type: object
+      required:
+        - tokenType
+        - accessToken
+        - accessTokenExpiresAt
+      #        - refreshToken
+      #        - refreshTokenExpiresAt
+      properties:
+        tokenType:
+          type: string
+          description: 固定為 `Bearer`
+          example: Bearer
+        accessToken:
+          type: string
+          description: JWT Access Token，本身不落地儲存
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        #        refreshToken:
+        #          type: string
+        #          description: JWT Refresh Token，雜湊值儲存於 `account_tokens.token_hash`
+        #        refreshTokenExpiresAt:
+        #          type: string
+        #          format: date-time
+        sessionUid:
+          type: string
+          format: uuid
+          description: 授權會話的 Session ID
+    #        scope:
+    #          type: string
+    #          description: 實際授權的 Scope
+    #        tenantUid:
+    #          type: string
+    #          format: uuid
+    #        accountUid:
+    #          type: string
+    #          format: uuid
+    SessionToken:
+      type: object
+      description: |
+        來源於 `account_tokens`，用於顯示各裝置的登入狀態。
+      x-related-tables:
+        - public.account_tokens
+      properties:
+        tokenId:
+          type: string
+          format: uuid
+        tokenType:
+          type: string
+          enum:
+            - ACCESS
+            - REFRESH
+            - API_KEY
+        clientId:
+          type: string
+        audience:
+          type: string
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        deviceName:
+          type: string
+          description: 前端可記錄的人性化裝置名稱
+        issuedAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        revoked:
+          type: boolean
+        revokedAt:
+          type: string
+          format: date-time
+        revocationReason:
+          type: string
+    TenantSummary:
+      type: object
+      description: |
+        供租戶選擇器顯示的租戶摘要資訊，來源為 `tenants`。
+      x-related-tables:
+        - public.tenants
+      required:
+        - tenantUid
+        - name
+      properties:
+        tenantUid:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: 內部租戶名稱
+        code:
+          type: string
+          description: 內部租戶代碼或客戶編號
+        status:
+          type: string
+          description: 租戶狀態（例如 ENABLED、DISABLED）
+    SwitchTenantRequest:
+      type: object
+      required:
+        - tenantUid
+      properties:
+        tenantUid:
+          type: string
+          format: uuid
+          description: 目標租戶的唯一識別碼 (`tenants.uid`)
+        reason:
+          type: string
+          maxLength: 255
+          description: 切換原因，會被寫入 `account_activity_logs`
+        sessionUid:
+          type: string
+          format: uuid
+          description: 指定要更新的 Session，預設為目前 Access Token 的 Session
+    SelectTenantResponse:
+      type: object
+      required:
+        - tenant
+        - tokens
+        - selectedAt
+      properties:
+        tenant:
+          $ref: "#/components/schemas/TenantSummary"
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+        selectedAt:
+          type: string
+          format: date-time
+          description: 完成租戶切換的時間
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        grantType:
+          type: string
+          description: 指定 Token 類型，目前僅支援 REFRESH_TOKEN
+    #        refreshToken:
+    #          type: string
+    #          description: Refresh Token
+    #        clientId:
+    #          type: string
+    #        scope:
+    #          type: string
+    #          description: 若未提供則沿用原有 Scope
+    RefreshTokenResponse:
+      type: object
+      required:
+        - tokens
+      properties:
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+    AccountProfile:
+      type: object
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+      required:
+        - accountUid
+        - username
+        - contactName
+        - email
+        - enabled
+        - role
+      properties:
+        accountUid:
+          type: string
+          format: uuid
+          description: 帳號鍵值
+        tenantUid:
+          type: string
+          format: uuid
+          description: 單位(租戶)名稱所屬鍵值(租戶鍵值)
+        tenantName:
+          type: string
+          description: 單位名稱
+        username:
+          type: string
+          description: 帳號
+        contactName:
+          type: string
+          description: 聯絡人姓名
+        email:
+          type: string
+          format: email
+          description: 帳號電子郵件
+        enabled:
+          type: boolean
+          description: 帳號啟用狀態
+        role:
+          $ref: "#/components/schemas/RoleSummary"
+        permissions:
+          type: array
+          items:
+            type: string
+          description: 權限代碼清單
+        lastLoginAt:
+          type: string
+          format: date-time
+          description: 最後登入時間
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 最後更新時間
+    RoleSummary:
+      type: object
+      description: 對應 `roles` 資料表
+      properties:
+        roleUid:
+          type: string
+          format: uuid
+          description: 角色鍵值
+        name:
+          type: string
+          description: 角色名稱
+        type:
+          type: string
+          description: |
+            角色類型:
+            * 平臺管理員：SUPER_ADMIN
+            * 管理員：ADMIN
+            * 使用者：OPERATOR
+        description:
+          type: string
+          description: 角色說明
+    UpdateAccountProfileRequest:
+      type: object
+      description: |
+        允許維護個人欄位，欄位設計參考 BDD「編輯現有使用者帳號」情境。
+      required:
+        - contactName
+        - email
+      properties:
+        contactName:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+    #        customerName:
+    #          type: string
+    #        locale:
+    #          type: string
+    #          example: zh-TW
+    #        timeZone:
+    #          type: string
+    #          example: Asia/Taipei
+    #        notificationChannels:
+    #          type: array
+    #          items:
+    #            type: string
+    #            enum:
+    #              - EMAIL
+    #              - SMS
+    #              - INBOX
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+        - newPasswordConfirm
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          description: 至少 12 碼並符合複雜度
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{12,64}$'
+        newPasswordConfirm:
+          type: string
+          format: password
+          description: 必須與 `newPassword` 相同
+    ResetPasswordRequest:
+      type: object
+      description: |
+        忘記密碼流程使用的 Reset Token 驗證請求者身分，並設定新密碼。成功後需在
+        `account_password_events` 記錄結果並使 Token 作廢。
+      required:
+        - token
+        - newPassword
+        - newPasswordConfirm
+      properties:
+        token:
+          type: string
+          format: uuid
+          description: 忘記密碼連結中的 Reset Token (`account_password_events.reset_token`)
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{12,64}$'
+          description: 新密碼需符合複雜度規則
+        newPasswordConfirm:
+          type: string
+          format: password
+          description: 必須與 `newPassword` 相同

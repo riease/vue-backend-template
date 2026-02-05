@@ -1,0 +1,685 @@
+openapi: 3.1.0
+info:
+  title: AR3-Accounts 帳號管理
+  description: |
+    ## API 清單
+    * AR3-Accounts-Create 新增帳號
+    * AR3-Accounts-Search 查詢帳號清單
+    * AR3-Accounts-Read 查詢帳號
+    * AR3-Accounts-Update 更新帳號
+    * AR3-Accounts-Delete 刪除帳號
+    * AR3-Accounts-ChangePassword 變更帳號密碼
+        
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey、AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/帳號管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/accounts"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: "https://www.autorisk365.com"
+      version:
+        description: 版號
+        default: "v1"
+tags:
+  - name: Accounts
+    description: 平台帳號的生命週期管理
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      tags:
+        - Accounts
+      summary: 查詢帳號清單
+      operationId: AR3-Accounts-Search
+      description: |
+        依照 `docs/features/帳號管理.feature` 中的「依條件篩選帳號列表」情境，提供角色、帳號與啟用狀態等條件式查詢，並支援分頁。
+        後端資料來源為 `public.accounts` (結合 `public.roles`、`public.tenants`)；查詢紀錄會寫入
+        `public.account_activity_logs` 以利稽核。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/RoleFilterParam"
+        - $ref: "#/components/parameters/UsernameFilterParam"
+        - $ref: "#/components/parameters/StatusFilterParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+        - $ref: "#/components/parameters/SortByParam"
+        - $ref: "#/components/parameters/SortOrderParam"
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 帳號分頁結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAccountssResponse"
+              examples:
+                default:
+                  summary: 依角色及狀態篩選
+                  value:
+                    paging:
+                      limit: 10
+                      offset: 0
+                      total: 2
+                    items:
+                      - uid: 4a9b4d8e-2d94-4d3c-8c46-5a7cf1f874a4
+                        username: admin
+                        displayName: 王小明
+                        email: wang.xiaoming@example.com
+                        status: ENABLED
+                        role:
+                          uid: 5d293f0f-3ca8-487a-ae2f-d6c4b6225a0b
+                          name: 管理者
+                        createdAt: 2024-01-03T02:12:43Z
+                        updatedAt: 2024-02-12T09:35:01Z
+                      - uid: d2e0f7c4-1b61-45ad-95e5-9504796698d1
+                        username: test123
+                        displayName: 陳大文
+                        email: david.chen@example.com
+                        status: ENABLED
+                        role:
+                          uid: 9bd63537-7c85-4a70-bf3b-7902362bfb1b
+                          name: 使用者
+                        createdAt: 2024-03-01T09:12:11Z
+                        updatedAt: 2024-03-18T08:03:55Z
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Accounts
+      summary: 新增帳號
+      operationId: AR3-Accounts-Create
+      description: |
+        新增帳號必須符合 `docs/features/帳號管理.feature` 的必填欄位規則，並落入 `public.accounts`
+        （含 `username` 唯一性限制）。建立成功後應記錄於 `public.account_activity_logs`，密碼雜湊及策略事件
+        則寫入 `public.account_password_events`。
+      #      parameters:
+      #        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountsRequest"
+            examples:
+              default:
+                summary: 建立啟用中的管理者帳號
+                value:
+                  roleUid: 5d293f0f-3ca8-487a-ae2f-d6c4b6225a0b
+                  displayName: 王小明
+                  username: admin2
+                  password: Pa55w0rd!
+                  passwordConfirm: Pa55w0rd!
+                  email: wang.xiaoming@example.com
+                  status: ENABLED
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+        - public.account_password_events
+        - public.account_activity_logs
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /{accountId}:
+    get:
+      tags:
+        - Accounts
+      summary: 查詢帳號
+      operationId: AR3-Accounts-Read
+      description: |
+        用於「編輯現有使用者帳號」情境中的預填資料，回傳 `public.accounts`、`public.roles` 與 `public.tenants`
+        的整合資訊。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AccountsIdPathParam"
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+      responses:
+        "200":
+          description: 單筆帳號內容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Accounts
+      summary: 更新帳號
+      operationId: AR3-Accounts-Update
+      description: |
+        更新角色、聯絡資訊或狀態，不含密碼（另見 ChangePassword）。`username` 為唯讀；若狀態為停用需同步更新
+        `accounts.enabled=false`。異動會寫入 `public.account_activity_logs`。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AccountsIdPathParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountsRequest"
+            examples:
+              disableUser:
+                summary: 停用使用者
+                value:
+                  #                  tenantUid: e9ea0f48-9e33-4a7d-9bf5-2f467e44f71f
+                  roleUid: 9bd63537-7c85-4a70-bf3b-7902362bfb1b
+                  displayName: 陳大文
+                  email: david.chen@example.com
+                  status: DISABLED
+      x-related-tables:
+        - public.accounts
+        - public.roles
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 更新後的帳號內容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Accounts
+      summary: 刪除帳號
+      operationId: AR3-Accounts-Delete
+      description: |
+        對應「刪除使用者帳號」情境。預設為軟刪除：移除 `accounts` 資料或標記為停用，並要求前端刷新列表。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AccountsIdPathParam"
+      x-related-tables:
+        - public.accounts
+        - public.account_activity_logs
+      responses:
+        "204":
+          description: 刪除成功，無回應內容
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /{accountId}/password:
+    post:
+      tags:
+        - Accounts
+      summary: 管理員變更帳號密碼
+      operationId: AR3-Accounts-ChangePassword
+      description: |
+        依 `docs/features/帳號管理.feature` 的密碼驗證情境，為指定帳號設定新密碼。系統需驗證確認密碼、套用密碼策略，並於
+        `public.account_password_events` 建立事件，同時記錄於 `public.account_activity_logs`。
+
+        **forceResetOnLogin 實作方式：**
+        當 `forceResetOnLogin=true` 時，系統會在 `account_password_events` 中記錄事件類型為 `ADMIN_RESET_PASSWORD`。
+        使用者下次登入時，系統會檢查是否存在未處理的 `ADMIN_RESET_PASSWORD` 事件，若存在則要求使用者變更密碼後才能繼續使用系統。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AccountsIdPathParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeAccountsPasswordRequest"
+            examples:
+              reset:
+                summary: 重設為暫時密碼
+                value:
+                  newPassword: TempPa55w0rd!
+                  newPasswordConfirm: TempPa55w0rd!
+      #                  forceResetOnLogin: true
+      x-related-tables:
+        - public.accounts
+        - public.account_password_events
+        - public.account_activity_logs
+      responses:
+        "204":
+          description: 密碼更新成功
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Uid
+      in: header
+      description: |
+        指定租戶識別碼，對應 `accounts.tenant_uid`。雖是非必填，但建議提供以提升防呆安全性(尤其是平台管理員在跨租戶操作時)。
+      required: false
+      schema:
+        type: string
+        format: uuid
+    LimitParam:
+      name: limit
+      in: query
+      description: 回傳筆數上限，預設 20，最大 100。
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    OffsetParam:
+      name: offset
+      in: query
+      description: 查詢位移量，搭配 `limit` 使用。
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    RoleFilterParam:
+      name: roleUid
+      in: query
+      description: 依角色篩選帳號，對應 `roles.uid`。
+      required: false
+      schema:
+        type: string
+        format: uuid
+    UsernameFilterParam:
+      name: username
+      in: query
+      description: 模糊比對帳號（`accounts.username`）。
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    StatusFilterParam:
+      name: status
+      in: query
+      description: 依啟用狀態篩選，對應 `accounts.enabled`。
+      required: false
+      schema:
+        $ref: "#/components/schemas/AccountsStatus"
+    SortByParam:
+      name: sortBy
+      in: query
+      description: 排序欄位，預設 `createdAt`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - createdAt
+          - username
+          - role
+          - displayName
+          - status
+        default: createdAt
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      description: 排序方向，預設 `DESC` (由新到舊)。
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+        default: DESC
+    AccountsIdPathParam:
+      name: accountId
+      in: path
+      description: 帳號唯一識別碼 (`accounts.uid`)。
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突（例如帳號或 Email 已存在、密碼與確認密碼不同）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+        code:
+          type: string
+          description: 系統定義錯誤代碼（例如 `ACCOUNT_DUPLICATE_USERNAME`）。
+        message:
+          type: string
+        path:
+          type: string
+          description: 觸發錯誤的 API 路徑
+        traceId:
+          type: string
+          description: 方便串接觀察性的追蹤 Id
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）。
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    Paging:
+      description: 分頁資訊
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    AccountsStatus:
+      type: string
+      description: 帳號啟用狀態，對應 `accounts.enabled`。
+      enum:
+        - ENABLED
+        - DISABLED
+    AccountSummary:
+      type: object
+      required:
+        - uid
+        - username
+      properties:
+        uid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+          description: 來源自 `accounts.display_name`。聯絡人姓名。
+    RoleSummary:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+    TenantSummary:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+    AccountsSummary:
+      type: object
+      required:
+        - uid
+        - username
+        - displayName
+        - email
+        - status
+        - role
+        - createdAt
+      properties:
+        uid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        #        tenantName:
+        #          type: string
+        status:
+          $ref: "#/components/schemas/AccountsStatus"
+        role:
+          $ref: "#/components/schemas/RoleSummary"
+        #        tenant:
+        #          $ref: '#/components/schemas/TenantSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AccountsDetail:
+      allOf:
+        - $ref: "#/components/schemas/AccountsSummary"
+        - type: object
+          properties:
+            lastLoginAt:
+              type: string
+              format: date-time
+              description: 來自 `account_activity_logs` 中最近一次 LOGIN 成功時間。
+            lastPasswordChangedAt:
+              type: string
+              format: date-time
+              description: 來自 `account_password_events` 中最近一次成功變更密碼的時間。
+            createdBy:
+              $ref: "#/components/schemas/AccountSummary"
+            updatedBy:
+              $ref: "#/components/schemas/AccountSummary"
+    ListAccountssResponse:
+      type: object
+      required:
+        - paging
+        - items
+      properties:
+        paging:
+          $ref: "#/components/schemas/Paging"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountsSummary"
+    BaseAccountsRequest:
+      type: object
+      required:
+        - roleUid
+        - displayName
+        - email
+        - status
+      properties:
+        #        tenantUid:
+        #          type: string
+        #          format: uuid
+        #          description: |
+        #            * 租戶識別碼 (`tenants.uid`)，若省略則依 `X-Tenant-Uid` 推論。
+        #            * 若是租戶帳號可省略，資料欄位中不必出現租戶(客戶)名稱欄位。
+        #            * 若是平台管理員則不可省略，畫面中出現租戶(客戶)名稱欄位，值為當前代理的租戶名稱，此為方便平台管理員識別以減少人為操作失誤。
+        roleUid:
+          type: string
+          format: uuid
+          description: 角色識別碼，對應 `roles.uid`。
+        displayName:
+          type: string
+          description: 聯絡人姓名。
+        email:
+          type: string
+          format: email
+        #        tenantName:
+        #          type: string
+        status:
+          $ref: "#/components/schemas/AccountsStatus"
+    CreateAccountsRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseAccountsRequest"
+        - type: object
+          required:
+            - username
+            - password
+            - passwordConfirm
+          properties:
+            username:
+              type: string
+              minLength: 4
+              maxLength: 64
+              pattern: "^[a-zA-Z0-9_.-]+$"
+              description: 帳號代號，需符合唯一性。
+            password:
+              type: string
+              format: password
+              minLength: 8
+            passwordConfirm:
+              type: string
+              format: password
+              description: 必須與 password 相同。
+    UpdateAccountsRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseAccountsRequest"
+    ChangeAccountsPasswordRequest:
+      type: object
+      required:
+        - newPassword
+        - newPasswordConfirm
+      properties:
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+        newPasswordConfirm:
+          type: string
+          format: password
+          description: 必須與 `newPassword` 一致。
+#        forceResetOnLogin:
+#          type: boolean
+#          default: false
+#          description: 是否要求使用者下次登入時重新設定密碼。

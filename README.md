@@ -6,9 +6,9 @@
 
 核心技術採用：
 
--   **Frontend Framework**: [Vue 3](https://vuejs.org/) - 使用 Composition API 與 `<script setup>`
--   **Build Tool**: [Vite](https://vitejs.dev/) - 極速的開發伺服器與打包工具
--   **Language**: [TypeScript](https://www.typescriptlang.org/) - 提供強型別支援
+- **Frontend Framework**: [Vue 3](https://vuejs.org/) - 使用 Composition API 與 `<script setup>`
+- **Build Tool**: [Vite](https://vitejs.dev/) - 極速的開發伺服器與打包工具
+- **Language**: [TypeScript](https://www.typescriptlang.org/) - 提供強型別支援
 
 ## 快速開始 (Getting Started)
 
