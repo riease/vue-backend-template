@@ -41,3 +41,113 @@ npm run preview
 ```
 
 用於在本地預覽打包後的結果。
+
+## 🤖 Claude Code Skills
+
+本專案內建一組 Claude Code Skills（放在 `.claude/skills/`），協助自動化常見的後台開發任務，包括專案初始化、由 OpenAPI 規格產生 TypeScript 程式碼、產生功能規格單等。
+
+> 前置條件：請先安裝 [Claude Code](https://claude.com/claude-code)，並在專案根目錄啟動。Skills 會在啟動後自動載入，可直接以 `/<skill-name>` 觸發。
+
+### Skills 一覽
+
+| Skill | 用途 | 觸發指令 |
+|---|---|---|
+| `setup-vue-backend` | 安裝標準 Vue 3 依賴並設定 `package.json` 的 scripts/alias | `/setup-vue-backend` |
+| `generate-feature-spec` | 由 `doc/api` 的 OpenAPI 規格產生功能規格單到 `doc/spec` | `/generate-feature-spec` |
+| `resolve-api-to-enum` | 由 OpenAPI 規格產生 TypeScript 列舉至 `src/enums/` | `/resolve-api-to-enum` |
+| `resolve-api-to-model` | 由 OpenAPI 規格產生 `BaseFormDataModel` 子類別至 `src/model/` | `/resolve-api-to-model` |
+| `resolve-api-to-query` | 由 OpenAPI 規格產生 `QueryParameter` 子類別 | `/resolve-api-to-query` |
+
+### 建議流程：從零初始化專案
+
+1. **建立 Vue 後台樣板基礎建設**
+
+   ```text
+   /setup-vue-backend
+   ```
+
+   會安裝核心套件（Vue / Axios / Pinia / vee-validate / yup / Bootstrap / `ch3chi-commons-vue` 等），並設定 `vite.config.ts` 的 `@` alias 與 `tsconfig` 路徑。
+
+2. **將 OpenAPI 規格放到 `doc/api/`**
+
+   ```text
+   doc/api/
+   ├── account.yaml
+   ├── hardware-configuration.yaml
+   └── ...
+   ```
+
+3. **產生功能規格單**
+
+   ```text
+   /generate-feature-spec
+   ```
+
+   - 互動模式：逐項詢問功能名稱、Actions、是否包含列表查詢等。
+   - 批次模式：直接指定 `doc/api` 目錄，產生所有規格單到 `doc/spec/`。
+
+4. **產生列舉型別（Enums）**
+
+   ```text
+   /resolve-api-to-enum
+   ```
+
+   會掃描 `doc/api/` 中所有具 `enum` 屬性的欄位，並輸出至 `src/enums/`（通用列舉放 `common.ts`，特定領域如 `user.ts`、`order.ts`）。
+
+5. **產生 Data Model**
+
+   ```text
+   /resolve-api-to-model
+   ```
+
+   為每個資源產生 `XxxDataModel.ts`，繼承 `BaseFormDataModel`，並依 OpenAPI 約束自動產出 Yup 驗證與 `toPayloadMap()`。
+
+6. **產生 Query Parameter**
+
+   ```text
+   /resolve-api-to-query
+   ```
+
+   或直接執行底層腳本：
+
+   ```bash
+   node .claude/skills/resolve-api-to-query/scripts/generate-query-params.js \
+     --input doc/api \
+     --output src/model/ACQueryParameter.ts
+   ```
+
+7. **格式化產生的程式碼**
+
+   ```bash
+   npm run format
+   ```
+
+### 預設輸出位置
+
+| 產出 | 路徑 |
+|---|---|
+| 功能規格單 | `doc/spec/<feature>-spec.md` |
+| 列舉型別 | `src/enums/<domain>.ts` |
+| Data Model | `src/model/<Feature>DataModel.ts` |
+| Query Parameter | `src/model/ACQueryParameter.ts` |
+| 共用驗證 Pattern | `src/model/validationRule/CommonRegexPattern.ts` |
+
+### 目錄結構參考
+
+```text
+.
+├── .claude/
+│   └── skills/                  # Claude Code 可用 skills
+│       ├── setup-vue-backend/
+│       ├── generate-feature-spec/
+│       ├── resolve-api-to-enum/
+│       ├── resolve-api-to-model/
+│       └── resolve-api-to-query/
+│           └── scripts/
+├── doc/
+│   ├── api/                     # OpenAPI 規格輸入
+│   └── spec/                    # 功能規格單輸出
+└── src/
+    ├── enums/                   # 產生的列舉
+    └── model/                   # 產生的 DataModel / QueryParameter
+```
