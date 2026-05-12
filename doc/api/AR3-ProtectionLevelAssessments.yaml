@@ -1,0 +1,790 @@
+openapi: 3.1.0
+info:
+  title: AR3-ProtectionLevelAssessments 系統防護需求等級評估表管理
+  description: |
+    ## API 清單
+    * AR3-ProtectionLevelAssessments-Create 新增防護需求等級評估表
+    * AR3-ProtectionLevelAssessments-Search 查詢防護需求等級評估表清單
+    * AR3-ProtectionLevelAssessments-Read 查詢防護需求等級評估表
+    * AR3-ProtectionLevelAssessments-Update 更新防護需求等級評估表
+    * AR3-ProtectionLevelAssessments-Delete 刪除防護需求等級評估表
+    * AR3-ProtectionLevelAssessments-Export 匯出防護需求等級評估表
+        
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey、AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/系統防護需求等級評估表管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/protection-level-assessments"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: "https://www.autorisk365.com"
+      version:
+        description: 版號
+        default: "v1"
+tags:
+  - name: ProtectionLevelAssessments
+    description: 資通系統防護需求等級評估作業 (建立、維護、匯出)
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      tags:
+        - ProtectionLevelAssessments
+      summary: 查詢防護需求等級評估表清單
+      operationId: AR3-ProtectionLevelAssessments-Search
+      description: |
+        依 `docs/features/系統防護需求等級評估表管理.feature` 的「依條件查詢評估表」、「瀏覽評估表列表分頁」
+        以及「清除查詢條件」情境，提供年度、資通系統名稱、資通系統 UID、整體防護等級及表單編號等條件式查詢，
+        並支援排序 (依評估日期、表單編號或評估年度) 與分頁功能。預設依評估日期降冪排序 (最新在前)。
+        後端資料來源為 `public.protection_level_assessments`，同時關聯 `public.information_systems` (系統資料)、
+        `public.accounts` (評估人) 與 `public.tenants`。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AssessmentYearFilterParam"
+        - $ref: "#/components/parameters/SystemNameFilterParam"
+        - $ref: "#/components/parameters/OverallLevelFilterParam"
+        - $ref: "#/components/parameters/FormNumberFilterParam"
+        - $ref: "#/components/parameters/SortByParam"
+        - $ref: "#/components/parameters/SortOrderParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.information_systems
+        - public.accounts
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 依條件篩選後的評估表分頁結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListProtectionLevelAssessmentsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - ProtectionLevelAssessments
+      summary: 新增防護需求等級評估表
+      operationId: AR3-ProtectionLevelAssessments-Create
+      description: |
+        對應 BDD「新增評估表」與「新增評估表時缺少必要欄位」情境，需驗證年度、資通系統、評估日期以及
+        五大構面的等級與原因說明。`formNumber` 由後端依年度及流水號自動產生 (唯一約束
+        `protection_level_assessments_form_number_key`)；儲存成功後回傳完整內容，並將操作紀錄寫入
+        `public.account_activity_logs`。  
+        新增成功後，同步將防護需求等級 `overall_level` 更新至 `information_systems.protection_level`。
+      #      parameters:
+      #        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProtectionLevelAssessmentsRequest"
+            examples:
+              default:
+                summary: 新增 2025 年高防護等級評估表
+                value:
+                  #                  assessmentYear: 2025
+                  systemUid: 2d89dc14-3cc5-4a33-acaf-3dc1a5a3a5b7
+                  assessmentDate: 2025-03-15
+                  confidentialityLevel: HIGH
+                  confidentialityReason: 含有完整客戶 PII
+                  integrityLevel: MEDIUM
+                  integrityReason: 關鍵營運報表需正確
+                  availabilityLevel: HIGH
+                  availabilityReason: CRM 停機影響客服作業
+                  legalLevel: MEDIUM
+                  legalReason: 涉及金管會資料報送
+                  #                  overallLevel: HIGH
+                  #                  overallReason: 需採取最高防護措施
+                  assessorUid: 3d5c45ae-95ac-4ce4-8fa7-6f3485f42ca8
+      #                  notes: 需追蹤備援演練
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.information_systems
+        - public.accounts
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtectionLevelAssessmentsDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /{assessmentId}:
+    get:
+      tags:
+        - ProtectionLevelAssessments
+      summary: 查詢防護需求等級評估表
+      operationId: AR3-ProtectionLevelAssessments-Read
+      description: |
+        提供「編輯評估表」情境的預填資料，回傳指定評估表的所有欄位，包含表單編號、系統/租戶/評估人資訊、
+        各構面防護等級與原因、備註等。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AssessmentIdPathParam"
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.information_systems
+        - public.accounts
+        - public.tenants
+      responses:
+        "200":
+          description: 單筆評估表資料
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtectionLevelAssessmentsDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - ProtectionLevelAssessments
+      summary: 更新防護需求等級評估表
+      operationId: AR3-ProtectionLevelAssessments-Update
+      description: |
+        依 BDD「編輯評估表」情境，允許調整評估年度、對應資通系統、評估日期、五大構面的等級與原因，以及備註。
+        更新時需檢查 `formNumber` 不可重複、`systemUid` 必須存在且與同一租戶對應，並記錄變更歷程至
+        `public.account_activity_logs`。  
+        更新成功後，同步將防護需求等級 `overall_level` 更新至 `information_systems.protection_level`。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AssessmentIdPathParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProtectionLevelAssessmentsRequest"
+            examples:
+              default:
+                summary: 調整整體防護等級與原因
+                value:
+                  #                  assessmentYear: 2025
+                  assessmentDate: 2025-04-01
+                  confidentialityLevel: MEDIUM
+                  confidentialityReason: 僅保存部分 PII
+                  integrityLevel: MEDIUM
+                  availabilityLevel: HIGH
+                  availabilityReason: 法遵要求 24x7
+                  legalLevel: MEDIUM
+      #                  overallLevel: MEDIUM
+      #                  overallReason: 採取中等防護即可
+      #                  notes: 需追蹤復原演練紀錄
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.information_systems
+        - public.accounts
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 更新成功後的評估表內容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtectionLevelAssessmentsDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - ProtectionLevelAssessments
+      summary: 刪除防護需求等級評估表
+      operationId: AR3-ProtectionLevelAssessments-Delete
+      description: |
+        對應 BDD「刪除評估表」情境。刪除動作應進行授權檢查並記錄於 `public.account_activity_logs`，實務上
+        可採軟刪除 (設定 `deleted` 欄位) 以利追蹤歷史紀錄，或直接移除資料列 (需確保無外鍵引用)。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AssessmentIdPathParam"
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.account_activity_logs
+      responses:
+        "204":
+          description: 刪除成功
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /export:
+    get:
+      tags:
+        - ProtectionLevelAssessments
+      summary: 匯出防護需求等級評估表
+      operationId: AR3-ProtectionLevelAssessments-Export
+      description: |
+        對應 BDD「匯出評估表」情境，依目前查詢條件產出 XLSX 檔案。  
+        系統應記錄匯出請求與下載者資訊 (`public.account_activity_logs`) 以利稽核。
+        需具備 `SYSTEM_LEVEL_ASSESSMENT:EXPORT` 權限。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/AssessmentUidFilterParam"
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.information_systems
+        - public.accounts
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 依條件產製的匯出檔案
+          Content-Disposition:
+            description: 檔名格式： `資通系統防護需求等級評估表_{formNumber}.xlsx`
+            schema:
+              type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Uid
+      in: header
+      description: 指定租戶識別碼 (`protection_level_assessments.tenant_uid`)。雖是非必填，但建議提供以提升防呆安全性(尤其是平台管理員在跨租戶操作時)。
+      required: false
+      schema:
+        type: string
+        format: uuid
+    LimitParam:
+      name: limit
+      in: query
+      description: 回傳筆數上限，預設 20，最大 100。
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    OffsetParam:
+      name: offset
+      in: query
+      description: 查詢位移量，搭配 `limit` 使用。
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    AssessmentUidFilterParam:
+      name: assessmentUid
+      in: query
+      description: 依評估表鍵值，對應 `protection_level_assessments.uid`。
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AssessmentYearFilterParam:
+      name: year
+      in: query
+      description: 依評估年度篩選，對應 `protection_level_assessments.assessment_year` (西元年，例 2025)。
+      required: false
+      schema:
+        type: integer
+        minimum: 1900
+        maximum: 2100
+    SystemNameFilterParam:
+      name: systemName
+      in: query
+      description: 依資通系統名稱模糊查詢，對應 `protection_level_assessments.snapshot_system_name`。
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    OverallLevelFilterParam:
+      name: overallLevel
+      in: query
+      description: 依整體防護需求等級篩選。
+      required: false
+      schema:
+        $ref: "#/components/schemas/ProtectionLevel"
+    FormNumberFilterParam:
+      name: formNumber
+      in: query
+      description: 依表單編號完全比對，對應 `protection_level_assessments.form_number`。
+      required: false
+      schema:
+        type: string
+        maxLength: 50
+    SortByParam:
+      name: sortBy
+      in: query
+      description: 排序欄位，預設為 `assessmentDate`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - assessmentDate
+          - formNumber
+          - assessmentYear
+        default: assessmentDate
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      description: 排序方向，預設為 `DESC` (由新到舊)。
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+        default: DESC
+    AssessmentIdPathParam:
+      name: assessmentId
+      in: path
+      description: 評估表唯一識別碼 (`protection_level_assessments.uid`)。
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突（例如表單編號重複、資通系統已刪除或不屬於同一租戶）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        code:
+          type: string
+          description: 平台自訂錯誤代碼。
+        details:
+          type: array
+          description: 詳細欄位驗證錯誤列表。
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）。
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    Paging:
+      description: 分頁資訊
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    AssessmentStatus:
+      type: string
+      description: 評估狀態。 UNASSESSED 未評估、EVALUATED 已評估、REASSESSMENT_REQUIRED 須重新評估
+      enum:
+        - UNASSESSED
+        - EVALUATED
+        - REASSESSMENT_REQUIRED
+    ProtectionLevel:
+      type: string
+      description: 防護需求等級，對應 `protection_level_assessments.*_level`。
+      enum:
+        - HIGH
+        - MEDIUM
+        - LOW
+    TenantSummary:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+    InformationSystemSummary:
+      type: object
+      description: |
+        資通系統摘要資訊。
+      required:
+        - uid
+        - name
+        - code
+        - protectionLevel
+        - isSharedSystem
+        - vendorName
+        - status
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: 資通系統名稱，對應 `information_systems.name`。
+        code:
+          type: string
+          description: 資通系統代碼，對應 `information_systems.code`。
+        protectionLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        protectionLevelDisplayName:
+          type: string
+          description: 資通系統保護層級顯示名稱。
+        isSharedSystem:
+          type: boolean
+          description: 共同性系統，對應 `information_systems.is_shared_system`。選擇系統後自動帶出。
+        vendorName:
+          type: string
+          nullable: true
+          description: 資通系統維護/開發商，對應 `information_systems.vendor_name`。選擇系統後自動帶出。
+        handlingUnit:
+          type: string
+          description: 承辦單位
+          nullable: true
+        handlerName:
+          type: string
+          description: 承辦人姓名
+          nullable: true
+        status:
+          type: string
+          description: 啟用狀態 (ENABLED/DISABLED)
+          enum:
+            - ENABLED
+            - DISABLED
+    AccountSummary:
+      type: object
+      required:
+        - uid
+        - username
+      properties:
+        uid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+          description: 來源自 `accounts.contact_name`。
+    ProtectionLevelAssessmentsSummary:
+      type: object
+      description: 防護需求等級評估表摘要（用於清單查詢）
+      required:
+        - uid
+        #        - tenantUid
+        - formNumber
+        - assessmentYear
+        - systemUid
+        - assessmentDate
+        - overallLevel
+        - assessmentStatus
+      properties:
+        uid:
+          type: string
+          format: uuid
+          description: 評估表唯一識別碼
+        #        tenantUid:
+        #          type: string
+        #          format: uuid
+        #          description: 租戶唯一識別碼
+        formNumber:
+          type: string
+          description: 後端產生的表單編號 (對應 `form_number`)。
+        assessmentYear:
+          type: integer
+          description: 評估年度 (西元年，例如 2025)。
+        assessmentDate:
+          type: string
+          format: date
+          description: 評估日期
+        assessmentStatus:
+          $ref: "#/components/schemas/AssessmentStatus"
+        assessmentStatusDisplayName:
+          type: string
+          description: 評估狀態顯示名稱。
+        overallLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        overallLevelDisplayName:
+          type: string
+          description: 評估等級顯示名稱
+        assessorUid:
+          type: string
+          format: uuid
+          nullable: true
+          description: 評估人唯一識別碼
+        assessorName:
+          type: string
+          nullable: true
+          description: 評估人姓名 (來自 `accounts.contact_name`)
+        snapshotInformationSystem:
+          description: 評估表建立時的資通系統摘要資訊。
+          $ref: "#/components/schemas/InformationSystemSummary"
+        informationSystem:
+          description: 當下的資通系統摘要資訊。
+          $ref: "#/components/schemas/InformationSystemSummary"
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 最後更新時間
+    ProtectionLevelAssessmentsDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProtectionLevelAssessmentsSummary"
+        - type: object
+          required:
+            - confidentialityLevel
+            - integrityLevel
+            - availabilityLevel
+            - legalLevel
+            - overallLevel
+          properties:
+            confidentialityLevel:
+              $ref: "#/components/schemas/ProtectionLevel"
+            confidentialityLevelDisplayName:
+              type: string
+              description: 機密性等級顯示文字
+            confidentialityReason:
+              type: string
+            integrityLevel:
+              $ref: "#/components/schemas/ProtectionLevel"
+            integrityLevelDisplayName:
+              type: string
+              description: 完整性等級顯示文字
+            integrityReason:
+              type: string
+            availabilityLevel:
+              $ref: "#/components/schemas/ProtectionLevel"
+            availabilityLevelDisplayName:
+              type: string
+              description: 可用性等級顯示文字
+            availabilityReason:
+              type: string
+            legalLevel:
+              $ref: "#/components/schemas/ProtectionLevel"
+            legalLevelDisplayName:
+              type: string
+              description: 法律遵循性等級顯示文字
+            legalReason:
+              type: string
+            #            overallReason:
+            #              type: string
+            #            notes:
+            #              type: string
+            createdBy:
+              $ref: "#/components/schemas/AccountSummary"
+            updatedBy:
+              $ref: "#/components/schemas/AccountSummary"
+    ListProtectionLevelAssessmentsResponse:
+      type: object
+      description: 防護需求等級評估表分頁查詢回應
+      required:
+        - paging
+        - items
+      properties:
+        paging:
+          $ref: "#/components/schemas/Paging"
+        items:
+          type: array
+          description: 符合條件的評估表摘要清單
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ProtectionLevelAssessmentsSummary"
+    BaseProtectionLevelAssessmentsRequest:
+      type: object
+      required:
+        #        - assessmentYear
+        - assessmentDate
+        - confidentialityLevel
+        - integrityLevel
+        - availabilityLevel
+        - legalLevel
+      properties:
+        #        assessmentYear:
+        #          type: integer
+        #          minimum: 1900
+        #          maximum: 2100
+        assessmentDate:
+          type: string
+          format: date
+          description: 評估日期
+        confidentialityLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        confidentialityReason:
+          type: string
+          maxLength: 4000
+          description: 機密性防護需求等級原因說明
+        integrityLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        integrityReason:
+          type: string
+          maxLength: 4000
+          description: 完整性防護需求等級原因說明
+        availabilityLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        availabilityReason:
+          type: string
+          maxLength: 4000
+          description: 可用性防護需求等級原因說明
+        legalLevel:
+          $ref: "#/components/schemas/ProtectionLevel"
+        legalReason:
+          type: string
+          maxLength: 4000
+          description: 法律遵循性防護需求等級原因說明
+    #        overallLevel:
+    #          $ref: '#/components/schemas/ProtectionLevel'
+    #        overallReason:
+    #          type: string
+    #          maxLength: 4000
+    #        notes:
+    #          type: string
+    #          maxLength: 4000
+    CreateProtectionLevelAssessmentsRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseProtectionLevelAssessmentsRequest"
+        - type: object
+          properties:
+            systemUid:
+              type: string
+              format: uuid
+              description: 被評估的資通系統 (`information_systems.uid`)。
+            assessorUid:
+              type: string
+              format: uuid
+              description: 評估人 (`accounts.uid`)，可為空表示尚未指派。
+    UpdateProtectionLevelAssessmentsRequest:
+      allOf:
+        - $ref: "#/components/schemas/BaseProtectionLevelAssessmentsRequest"

@@ -1,0 +1,1076 @@
+openapi: 3.1.0
+info:
+  title: AR3-Common 通用資料查詢
+  description: |
+    做為選單元件的清單內容，如：下拉選單、radio, checkbox,...，故回應的資料狀態須為未刪除且啟用。
+
+    ## API 清單
+    * AR3-Common-Role-Search 查詢角色清單
+    * AR3-Common-Year-Search 查詢年度清單
+    * AR3-Common-ProtectionLevel-Search 查詢防護需求等級清單
+    * AR3-Common-Tenant-Search 查詢租戶(客戶)列表(用於租戶選擇器)
+    * AR3-Common-InformationSystem-Search 查詢資通系統列表(用於資通系統下拉選單)
+    * AR3-Common-InformationSystem-SearchProtectionLevelNotAssessment 查詢該年度未執行防護需求等級評估的資通系統列表(用於資通系統下拉選單)
+    * AR3-Common-Configuration-CodePrefix 查詢組態管理組態編號前置碼清單(依子類別決定前置碼)
+    * AR3-Common-Configuration-PersonalDataItems 查詢資訊組態管理-個人資料類別
+    * AR3-Common-SecurityControl-Search 查詢資通系統防護基準控制措施項目清單
+    * AR3-Common-SecurityControlFamily-Search 查詢資通系統防護基準控制措施構面清單
+    * AR3-Common-AssessmentStatus-Search 查詢評估狀態清單(用於查詢條件下拉選單)
+            
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey、AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：
+      * `docs/features/帳號管理.feature`
+      * `docs/features/租戶管理.feature`
+      * `docs/features/系統防護需求等級評估表管理.feature`
+      * `docs/features/資通系統防護基準檢核表管理.feature`
+      * `docs/features/資通系統清冊管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/common"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: "https://www.autorisk365.com"
+      version:
+        description: 版號
+        default: "v1"
+tags:
+  - name: Common
+    description: 共用下拉選單 / 查詢條件使用的輔助 API
+security:
+  - bearerAuth: []
+paths:
+  /roles:
+    get:
+      tags:
+        - Common
+      summary: 查詢角色清單
+      operationId: AR3-Common-Role-Search
+      description: |
+        依 `docs/features/帳號管理.feature` 的「新增/編輯帳號」情境，提供角色下拉選單使用的清單。  
+        平台管理員可指定租戶以取得租戶自訂角色。資料來源為 `public.roles`。  
+        只會回傳未被刪除且狀態為啟用的資料。  
+        因為平台管理員登入時必須選擇欲代理的租戶，故目前的帳號管理只適用於管理租戶的帳號，故只能看到類型為 `ADMIN` 及 `OPERATOR` 的角色。
+      #      parameters:
+      #        - $ref: '#/components/parameters/TenantHeader'
+      x-related-tables:
+        - public.roles
+        - public.tenants
+      responses:
+        "200":
+          description: 角色清單
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRolesResponse"
+              examples:
+                default:
+                  summary: 查詢租戶管理員角色
+                  value:
+                    #                    paging:
+                    #                      limit: 10
+                    #                      offset: 0
+                    #                      total: 2
+                    items:
+                      - uid: 5d293f0f-3ca8-487a-ae2f-d6c4b6225a0b
+                        name: 一般使用者
+                        type: OPERATOR
+                      #                        description: 可代理所有租戶
+                      #                        enabled: true
+                      #                        tenant:
+                      #                          uid: null
+                      #                          name: 平臺
+                      - uid: 9bd63537-7c85-4a70-bf3b-7902362bfb1b
+                        name: 租戶管理員
+                        type: ADMIN
+        #                        description: 掌控本租戶帳號、系統
+        #                        enabled: true
+        #                        tenant:
+        #                          uid: e9ea0f48-9e33-4a7d-9bf5-2f467e44f71f
+        #                          name: 耐辰金控
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /years:
+    get:
+      tags:
+        - Common
+      summary: 查詢年度清單
+      operationId: AR3-Common-Year-Search
+      description: |
+        服務所有需要「年度」下拉選單的模組，例如系統防護需求等級評估表、資通系統防護基準檢核表與
+        資通系統清冊。後端會依 `source` 決定取值來源：
+        * `PROTECTION_LEVEL_ASSESSMENT`：distinct `protection_level_assessments.assessment_year`
+        * `SYSTEM_CHECKLIST`：distinct `system_checklists.assessment_year`
+        * `SYSTEM_INVENTORY`：distinct `system_inventories.inventory_year`
+        * `CUSTOM_RANGE`：依 `startYear` 與 `endYear` 產生遞減清單
+        可搭配 `tenantUid` 過濾特定租戶的資料列。若來源無資料則預設回應近二年的年度(包含去年及今年)。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/YearSourceParam"
+        - $ref: "#/components/parameters/StartYearParam"
+        - $ref: "#/components/parameters/EndYearParam"
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.system_checklists
+        - public.system_inventories
+      responses:
+        "200":
+          description: 年度清單 (依年份遞減排序)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListYearsResponse"
+              examples:
+                default:
+                  summary: 取得防護需求評估年度
+                  value:
+                    items:
+                      - value: 2025
+                        label: 2025
+                        source: PROTECTION_LEVEL_ASSESSMENT
+                      - value: 2024
+                        label: 2024
+                        source: PROTECTION_LEVEL_ASSESSMENT
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /protection-levels:
+    get:
+      tags:
+        - Common
+      summary: 查詢防護需求等級清單
+      operationId: AR3-Common-ProtectionLevel-Search
+      description: |
+        回傳平台支援的防護需求等級選項 (HIGH/MEDIUM/LOW)，供評估表、清冊等功能復用。
+        資料定義取自 `protection_level_assessments_*_level_check` 與
+        `system_inventories_protection_level_check`。
+      x-related-tables:
+        - public.protection_level_assessments
+        - public.system_inventories
+      responses:
+        "200":
+          description: 防護需求等級清單
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListProtectionLevelsResponse"
+              examples:
+                default:
+                  value:
+                    items:
+                      - code: HIGH
+                        displayName: 高 (High)
+                        #                        description: 使用者/法規要求最高等級保護，通常需具備雙機、備援、加密。
+                        severityOrder: 5
+                      - code: MEDIUM
+                        displayName: 中 (Medium)
+                        #                        description: 標準防護需求。
+                        severityOrder: 3
+                      - code: LOW
+                        displayName: 低 (Low)
+                        #                        description: 允許基本資安控制即可。
+                        severityOrder: 1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /tenants:
+    get:
+      tags:
+        - Common
+      summary: 查詢租戶列表，用於租戶選擇器的租戶清單查詢。
+      operationId: AR3-Common-Tenant-Search
+      description: |
+        回應有效的租戶。查詢條件是未被刪除且已啟用的租戶。
+        資料來源為 `public.tenants`，查詢結果依租戶名稱 ASC 排序。
+      parameters:
+        - $ref: "#/components/parameters/KeywordParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      x-related-tables:
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 租戶分頁結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTenantsResponse"
+              examples:
+                default:
+                  summary: 依狀態與名稱查詢
+                  value:
+                    paging:
+                      limit: 10
+                      offset: 0
+                      total: 2
+                    items:
+                      - uid: 5bd3c050-6ecb-4df0-9a26-8788b4148ee1
+                        code: CUST-001
+                        name: 耐辰金控
+                        description: 金融客戶，使用所有模組
+                      - uid: 43f6d7a6-03b0-4a1d-8759-907cf3cf09a6
+                        code: LOGI-8822
+                        name: 光速物流
+                        description: 物流調度系統導入中
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /information-systems:
+    get:
+      tags:
+        - Common
+      summary: 查詢資通系統列表 (資通系統下拉選單)
+      operationId: AR3-Common-InformationSystem-Search
+      description: |
+        供各模組的「關聯資通系統」下拉選單使用，資料來源 `public.information_systems`。僅回傳未刪除且啟用的資通系統。
+        支援依名稱關鍵字模糊查詢，並依名稱 ASC 排序，不提供分頁。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/KeywordParam"
+        - $ref: "#/components/parameters/AssessedOnlyParam"
+      x-related-tables:
+        - public.information_systems
+        - public.tenants
+      responses:
+        "200":
+          description: 資通系統列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInformationSystemsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /information-systems/protection-level-not-assessment:
+    get:
+      tags:
+        - Common
+      summary: 查詢該年度未執行防護需求等級評估的資通系統列表 (資通系統下拉選單)
+      operationId: AR3-Common-InformationSystem-SearchProtectionLevelNotAssessment
+      description: |
+        供系統防護需求等級評估管理模組的「資通系統」下拉選單使用。僅回傳指定年度中啟用且未執行防護需求等級評估的資通系統。
+        支援依名稱關鍵字模糊查詢，並依名稱 ASC 排序，不提供分頁。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/KeywordParam"
+        - $ref: "#/components/parameters/YearParam"
+      x-related-tables:
+        - tenants
+        - information_systems
+        - protection_level_assessments
+      responses:
+        "200":
+          description: 資通系統列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInformationSystemsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /configuration/code-prefix:
+    get:
+      tags:
+        - Common
+      summary: 查詢組態管理組態編號前置碼清單(依子類別決定前置碼)
+      operationId: AR3-Common-Configuration-CodePrefix
+      description: |
+        供組態管理新增/編輯組態時，選擇不同的子類別時，變更組態編號的前置碼。  
+        可以一次查詢所有類別的前置碼或是指定類別查詢。  
+        為了避免用戶輸入組態編號時手動輸入前置碼，提供此API供前端使用。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/ConfigurationItemTypeParam"
+        - $ref: "#/components/parameters/ConfigurationCategoryParam"
+        - $ref: "#/components/parameters/ConfigurationSubcategoryParam"
+      x-related-tables:
+        - public.configuration_categories
+      responses:
+        "200":
+          description: 各組態類別的組態編號前置碼
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListConfigurationCodePrefixResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /configuration/personal-data-items:
+    get:
+      tags:
+        - Common
+      summary: 查詢資訊組態管理-個人資料類別
+      operationId: AR3-Common-Configuration-PersonalDataItems
+      description: 查詢資訊組態管理的個人資料類別清單
+      responses:
+        "200":
+          description: 各組態類別的組態編號前置碼
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPersonalDataItemsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /security-controls:
+    get:
+      tags:
+        - Common
+      summary: 查詢資通系統防護基準控制措施項目清單
+      operationId: AR3-Common-SecurityControl-Search
+      description: |
+        依據ISO版本及控制措施等級，查詢資通系統防護基準控制措施項目清單。  
+        查詢條件 `isoStandard` 若沒有給值，預設為 `ISO/IEC 27001:2022`。  
+        查詢條件 `code` 若有值，則只回傳符合該控制項編號的控制措施。
+        查詢條件 `level` 為必要條件，回傳符合該評分等級的控制措施。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/IsoStandardParam"
+        - $ref: "#/components/parameters/SecurityControlCodeParam"
+        - $ref: "#/components/parameters/SecurityControlCriteriaLevelParam"
+        - $ref: "#/components/parameters/SecurityControlOutputParam"
+      responses:
+        "200":
+          description: 資通系統防護基準控制措施清單
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ListSecurityControlsTreeResponse"
+                  - $ref: "#/components/schemas/ListSecurityControlsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /security-controls/family:
+    get:
+      tags:
+        - Common
+      summary: 查詢資通系統防護基準控制措施構面清單
+      operationId: AR3-Common-SecurityControlFamily-Search
+      description: |
+        依據ISO版本及控制措施等級，查詢資通系統防護基準控制措施構面清單。
+      parameters:
+        #        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: "#/components/parameters/IsoStandardParam"
+      responses:
+        "200":
+          description: 資通系統防護基準控制措施構面清單
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSecurityControlsFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /assessment-status:
+    get:
+      tags:
+        - Common
+      summary: 查詢評估狀態清單(用於查詢條件下拉選單)
+      operationId: AR3-Common-AssessmentStatus-Search
+      description: |
+        用於查詢條件下拉選單，如：資通系統防護基準檢核表列表查詢條件。  
+        評估狀態包括：
+        * UNASSESSED 未評估
+        * EVALUATED 已評估
+        * REASSESSMENT_REQUIRED 需要重新評估
+      #      parameters:
+      #        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        "200":
+          description: 評估狀態清單
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAssessmentStatusResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Uid
+      in: header
+      description: 指定租戶識別碼，用於限制查詢資料範圍。雖是非必填，但建議提供以提升防呆安全性(尤其是平台管理員在跨租戶操作時)。
+      required: false
+      schema:
+        type: string
+        format: uuid
+    LimitParam:
+      name: limit
+      in: query
+      description: 回傳筆數上限，預設 20，最大 100。
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    OffsetParam:
+      name: offset
+      in: query
+      description: 查詢位移量，搭配 `limit` 使用。
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    KeywordParam:
+      name: keyword
+      in: query
+      description: 模糊搜尋條件 (名稱或代碼)。
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    AssessedOnlyParam:
+      name: assessedOnly
+      in: query
+      description: 是否只返回至少做過一次防護需求等級評估的資通系統。
+      required: false
+      schema:
+        type: boolean
+        default: false
+    YearSourceParam:
+      name: source
+      in: query
+      description: 年度資料來源。
+      required: true
+      schema:
+        $ref: "#/components/schemas/YearSource"
+    YearParam:
+      name: year
+      in: query
+      description: 4 碼西元年，如：2025。 若未帶入，系統自動以當年度為預設值。
+      required: false
+      schema:
+        type: integer
+    StartYearParam:
+      name: startYear
+      in: query
+      description: 自訂年度來源時的起始年份 (含)。
+      required: false
+      schema:
+        type: integer
+        minimum: 1900
+        maximum: 2100
+    EndYearParam:
+      name: endYear
+      in: query
+      description: 自訂年度來源時的結束年份 (含)，必須小於或等於 `startYear`。
+      required: false
+      schema:
+        type: integer
+        minimum: 1900
+        maximum: 2100
+    ConfigurationItemTypeParam:
+      name: ciType
+      in: query
+      description: 組態的種類。如：HARDWARE,SOFTWARE,PEOPLE,INFRASTRUCTURE,INFORMATION。
+      required: false
+      schema:
+        type: string
+    ConfigurationCategoryParam:
+      name: category
+      in: query
+      description: 組態的類別。如：HW,SW,PE,IF,IM。
+      required: false
+      schema:
+        type: string
+    ConfigurationSubcategoryParam:
+      name: subcategory
+      in: query
+      description: 組態的子類別。如：HW-SRV,HW-NET,SW-OS,PE-EMP,IF-WA,IM-INFO,...等等。
+      required: false
+      schema:
+        type: string
+    IsoStandardParam:
+      name: isoStandard
+      in: query
+      description: ISO版本。例如：ISO/IEC 27001:2022
+      required: false
+      schema:
+        type: string
+    SecurityControlCodeParam:
+      name: code
+      in: query
+      description: 控制項編號
+      schema:
+        type: string
+    SecurityControlCriteriaLevelParam:
+      name: level
+      in: query
+      description: 控制項評分等級。例如：LOW,MEDIUM,HIGH
+      required: true
+      schema:
+        type: string
+    SecurityControlOutputParam:
+      name: output
+      in: query
+      description: 控制項輸出格式。 list列表、tree樹狀，預設為 tree。
+      required: false
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        code:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    Paging:
+      description: 分頁資訊
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    RoleType:
+      type: string
+      description: 角色類型，對應 `roles.type`。
+      enum:
+        - SUPER_ADMIN
+        - ADMIN
+        - OPERATOR
+    EnabledStatus:
+      type: string
+      enum:
+        - ENABLED
+        - DISABLED
+    TenantStatus:
+      type: string
+      enum:
+        - ENABLED
+        - DISABLED
+    YearSource:
+      type: string
+      enum:
+        - PROTECTION_LEVEL_ASSESSMENT
+        - SYSTEM_CHECKLIST
+        - SYSTEM_INVENTORY
+        - CUSTOM_RANGE
+    RoleSummary:
+      type: object
+      required:
+        - uid
+        - name
+        - type
+      #        - enabled
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/RoleType"
+    #        description:
+    #          type: string
+    #        enabled:
+    #          type: boolean
+    #        tenant:
+    #          type: object
+    #          nullable: true
+    #          properties:
+    #            uid:
+    #              type: string
+    #              format: uuid
+    #              nullable: true
+    #            name:
+    #              type: string
+    TenantSummary:
+      type: object
+      required:
+        - uid
+        - name
+      properties:
+        uid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          description: 租戶代碼
+        description:
+          type: string
+          description: 描述說明
+    YearItem:
+      type: object
+      required:
+        - value
+        - label
+        - source
+      properties:
+        value:
+          type: integer
+        label:
+          type: string
+        source:
+          $ref: "#/components/schemas/YearSource"
+    ProtectionLevelItem:
+      type: object
+      required:
+        - code
+        - displayName
+        - severityOrder
+      properties:
+        code:
+          type: string
+          enum:
+            - HIGH
+            - MEDIUM
+            - LOW
+        displayName:
+          type: string
+        #        description:
+        #          type: string
+        severityOrder:
+          type: integer
+          description: 數值越大表示防護需求越高。
+    ListRolesResponse:
+      type: object
+      required:
+        - paging
+        - items
+      properties:
+        #        paging:
+        #          $ref: '#/components/schemas/Paging'
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleSummary"
+    ListTenantsResponse:
+      type: object
+      required:
+        - paging
+        - items
+      properties:
+        paging:
+          $ref: "#/components/schemas/Paging"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantSummary"
+    ListYearsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/YearItem"
+    ListProtectionLevelsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtectionLevelItem"
+    ProtectionLevel:
+      type: string
+      description: 防護需求等級，對應 `protection_level_assessments.*_level`。
+      enum:
+        - HIGH
+        - MEDIUM
+        - LOW
+    InformationSystemOption:
+      type: object
+      required:
+        - uid
+        - name
+        - code
+      properties:
+        uid:
+          type: string
+          format: uuid
+          description: 鍵值
+        name:
+          type: string
+          description: 名稱
+        code:
+          type: string
+          description: 代號
+        isSharedSystem:
+          type: boolean
+          description: 是否為共用系統
+        vendorName:
+          type: string
+          description: 供應商名稱
+        protectionLevel:
+          allOf:
+            - $ref: "#/components/schemas/ProtectionLevel"
+          description: 直接使用 information_systems.protection_level，欄位由評估同步機制維護，可能為 null。
+        handlingUnit:
+          type: string
+          description: 承辦單位
+        handlerName:
+          type: string
+          description: 承辦人姓名
+    ListInformationSystemsResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InformationSystemOption"
+    ConfigurationCodePrefixOption:
+      type: object
+      properties:
+        ciType:
+          type: string
+          description: 組態種類
+        category:
+          type: string
+          description: 組態類別
+        subcategory:
+          type: string
+          description: 組態子類別
+        codePrefix:
+          type: string
+          description: 組態編號前置碼
+        categoryName:
+          type: string
+          description: 組態類別名稱
+        subcategoryName:
+          type: string
+          description: 組態子類別名稱
+    ListConfigurationCodePrefixResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigurationCodePrefixOption"
+    ListPersonalDataItemsResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+            description: 個人資料項目
+            enum:
+              - 姓名
+              - 生日
+              - 身分證號
+              - 護照號碼
+              - 特徵
+              - 指紋
+              - 婚姻
+              - 家庭
+              - 教育
+              - 職業
+              - 病歷
+              - 醫療
+              - 基因
+              - 性生活
+              - 健康檢查
+              - 犯罪前科
+              - 聯絡方式
+              - 財務情況
+              - 社會活動
+    SecurityControlOption:
+      description: 資通系統防護基準控制措施
+      type: object
+      properties:
+        controlCode:
+          type: string
+          description: 控制措施代碼
+          minLength: 1
+          maxLength: 50
+        name:
+          type: string
+          description: 控制措施名稱
+          minLength: 1
+          maxLength: 255
+        family:
+          type: string
+          description: 控制措施構面。例如：存取控制、稽核與可歸責性、系統與服務獲得。
+          minLength: 1
+          maxLength: 100
+        isoStandard:
+          type: string
+          description: ISO版本。例如：ISO/IEC 27001:2013
+          minLength: 1
+          maxLength: 50
+        criteriaContents:
+          description: 控制措施分級內容清單
+          type: array
+          items:
+            type: string
+            description: 包含等級資訊的控制措施內容。
+            example:
+              - 建立帳號管理機制，包含帳號之申請、開通、停用及刪除之程序。 [普]
+              - 已逾期之臨時或緊急帳號應刪除或禁用。 [中]
+              - 資通系統閒置帳號應禁用。 [中]
+              - 定期審核資通系統帳號之建立、修改、啟用、禁用及刪除。 [中]
+              - 逾越機關所定預期閒置時間或可使用期限時，系統應自動將使用者登出。 [高]
+              - 應依機關規定之情況及條件，使用資通系統。 [高]
+              - 監控資通系統帳號，如發現帳號違常使用時回報管理者。 [高]
+    ListSecurityControlsResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecurityControlOption"
+    ListSecurityControlsTreeResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              family:
+                type: string
+                description: 控制措施構面。例如：存取控制、稽核與可歸責性、系統與服務獲得。
+                minLength: 1
+                maxLength: 100
+              controls:
+                type: array
+                description: 控制措施項目清單。例如：帳號管理、最小權限、遠端存取。
+                items:
+                  type: object
+                  properties:
+                    controlCode:
+                      type: string
+                      description: 控制措施代碼
+                      minLength: 1
+                      maxLength: 50
+                    name:
+                      type: string
+                      description: 控制措施項目名稱
+                      minLength: 1
+                      maxLength: 255
+                    criteriaContents:
+                      description: 控制措施分級內容清單
+                      type: array
+                      items:
+                        type: string
+                        description: 包含等級資訊的控制措施內容。
+                        example:
+                          - 建立帳號管理機制，包含帳號之申請、開通、停用及刪除之程序。 [普]
+                          - 已逾期之臨時或緊急帳號應刪除或禁用。 [中]
+                          - 資通系統閒置帳號應禁用。 [中]
+                          - 定期審核資通系統帳號之建立、修改、啟用、禁用及刪除。 [中]
+                          - 逾越機關所定預期閒置時間或可使用期限時，系統應自動將使用者登出。 [高]
+                          - 應依機關規定之情況及條件，使用資通系統。 [高]
+                          - 監控資通系統帳號，如發現帳號違常使用時回報管理者。 [高]
+              isoStandard:
+                type: string
+                description: ISO版本。例如：ISO/IEC 27001:2013
+                minLength: 1
+                maxLength: 50
+    SecurityControlFamilyOption:
+      description: 資通系統防護基準控制措施構面
+      type: object
+      properties:
+        family:
+          type: string
+          description: 控制措施構面。例如：存取控制、稽核與可歸責性、系統與服務獲得。
+          minLength: 1
+          maxLength: 100
+        isoStandard:
+          type: string
+          description: ISO版本。例如：ISO/IEC 27001:2013
+          minLength: 1
+          maxLength: 50
+    ListSecurityControlsFamilyResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecurityControlFamilyOption"
+    AssessmentStatusOption:
+      description: 評估狀態
+      type: object
+      properties:
+        code:
+          type: string
+          description: 評估狀態。例如：UNASSESSED、EVALUATED、REASSESSMENT_REQUIRED
+        displayName:
+          type: string
+          description: ｜
+            評估狀態顯示文字
+            * UNASSESSED 未評估
+            * EVALUATED 已評估
+            * REASSESSMENT_REQUIRED 需重新評估
+    ListAssessmentStatusResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssessmentStatusOption"

@@ -1,0 +1,554 @@
+openapi: 3.1.0
+info:
+  title: AR3-Tenants 租戶(客戶)管理
+  description: |
+    在租戶選擇器中實作租戶管理。
+
+    ## API 清單
+    * AR3-Tenants-Create 新增租戶(客戶)
+    * AR3-Tenants-Search 查詢租戶(客戶)列表
+    * AR3-Tenants-Read 查詢租戶(客戶)
+    * AR3-Tenants-Update 更新租戶(客戶)
+    * AR3-Tenants-Delete 刪除租戶(客戶)
+        
+    ## 非 200 狀態回應說明
+    目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
+    * 請求格式錯誤。http status code 400。
+    * 缺少 ApiKey、AccessToken 或是驗證失敗。http status code 401。
+    * 操作權限不足。http status code 403。
+    * 請求的資源不存在。http status code 404。
+    * 資源衝突錯誤。http status code 409。
+    * 伺服端錯誤。http status code 500。
+
+    ## 參考文件
+    * 資料庫規格：`docs/DB/database-schema.sql`
+    * BDD 規格：`docs/features/租戶管理.feature`
+  version: 1.0.0
+servers:
+  - url: "{baseUrl}/api/{version}/tenants"
+    variables:
+      baseUrl:
+        description: 主機網址
+        default: "https://www.autorisk365.com"
+      version:
+        description: 版號
+        default: "v1"
+tags:
+  - name: Tenants
+    description: 平台租戶(客戶)的生命週期管理
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      tags:
+        - Tenants
+      summary: 查詢租戶列表
+      operationId: AR3-Tenants-Search
+      description: |
+        依 `docs/features/租戶管理.feature` 的「依條件查詢租戶列表」、「瀏覽租戶分頁」情境，提供狀態等條件式查詢，並支援關鍵字模糊搜尋。
+        資料來源為 `public.tenants`，查詢結果依 `updated_at` DESC、`created_at` DESC 排序；每次查詢需記錄於 `public.account_activity_logs` 以供稽核。
+      parameters:
+        - $ref: "#/components/parameters/TenantKeywordParam"
+        #        - $ref: '#/components/parameters/TenantCodeFilterParam'
+        #        - $ref: '#/components/parameters/TenantNameFilterParam'
+        - $ref: "#/components/parameters/TenantStatusFilterParam"
+        #        - $ref: '#/components/parameters/TenantIncludeDeletedParam'
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      x-related-tables:
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 租戶分頁結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTenantsResponse"
+              examples:
+                default:
+                  summary: 依狀態與名稱查詢
+                  value:
+                    paging:
+                      limit: 10
+                      offset: 0
+                      total: 2
+                    items:
+                      - uid: 5bd3c050-6ecb-4df0-9a26-8788b4148ee1
+                        code: CUST-001
+                        name: 耐辰金控
+                        description: 金融客戶，使用所有模組
+                        status: ENABLED
+                        createdAt: 2023-12-01T09:00:00Z
+                        updatedAt: 2024-03-05T06:12:11Z
+                      #                        deleted: false
+                      #                        deletedAt: null
+                      - uid: 43f6d7a6-03b0-4a1d-8759-907cf3cf09a6
+                        code: LOGI-8822
+                        name: 光速物流
+                        description: 物流調度系統導入中
+                        status: DISABLED
+                        createdAt: 2024-01-15T02:11:19Z
+                        updatedAt: 2024-02-20T01:04:55Z
+        #                        deleted: false
+        #                        deletedAt: null
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Tenants
+      summary: 新增租戶
+      operationId: AR3-Tenants-Create
+      description: |
+        依 `docs/features/租戶管理.feature` 的「新增租戶」情境，建立新的租戶資料。`code` 欄位應保持全域唯一，
+        `status` 預設為 ENABLED。成功建立後需回傳完整的租戶內容並寫入 `public.account_activity_logs`。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantsRequest"
+            examples:
+              default:
+                summary: 建立啟用中的租戶
+                value:
+                  code: LOGI-2024
+                  name: 光速物流
+                  description: 提供 24/7 配送服務
+                  status: ENABLED
+      x-related-tables:
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /{tenantId}:
+    get:
+      tags:
+        - Tenants
+      summary: 查詢租戶
+      operationId: AR3-Tenants-Read
+      description: |
+        用於「檢視/編輯租戶」情境，下鑽 `public.tenants` 單筆資料：
+        查詢結果也會記錄於 `public.account_activity_logs`。
+      parameters:
+        - $ref: "#/components/parameters/TenantIdPathParam"
+      x-related-tables:
+        - public.tenants
+        - public.accounts
+        - public.information_systems
+        - public.configuration_items
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 單筆租戶內容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Tenants
+      summary: 更新租戶
+      operationId: AR3-Tenants-Update
+      description: |
+        對應「更新租戶」情境，可調整租戶名稱、描述與狀態。系統需阻擋重複的 `code`、不允許直接修改已刪除租戶，
+        並於成功後回傳更新後內容。
+      parameters:
+        - $ref: "#/components/parameters/TenantIdPathParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTenantsRequest"
+            examples:
+              default:
+                summary: 停用租戶
+                value:
+                  code: LOGI-2024
+                  name: 光速物流
+                  description: 暫停合作，待重新簽約
+                  status: DISABLED
+      x-related-tables:
+        - public.tenants
+        - public.account_activity_logs
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Tenants
+      summary: 刪除租戶
+      operationId: AR3-Tenants-Delete
+      description: |
+        對應「刪除租戶」情境。採軟刪除：將 `public.tenants.deleted` 設為 true 並填入 `deleted_at`，後續查詢需透過
+        `includeDeleted=true` 才能檢視。刪除前需確認租戶下所有關聯資源 (帳號、資通系統、組態) 已移轉或停用。
+      parameters:
+        - $ref: "#/components/parameters/TenantIdPathParam"
+      x-related-tables:
+        - public.tenants
+        - public.accounts
+        - public.information_systems
+        - public.configuration_items
+        - public.account_activity_logs
+      responses:
+        "204":
+          description: 刪除成功，無回應內容
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: 回傳筆數上限，預設 20，最大 100。
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    OffsetParam:
+      name: offset
+      in: query
+      description: 查詢位移量，搭配 `limit` 使用。
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    TenantKeywordParam:
+      name: keyword
+      in: query
+      description: 模糊比對租戶代碼或名稱，對應 `tenants.code`、`tenants.name`。
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    TenantCodeFilterParam:
+      name: code
+      in: query
+      description: 依租戶代碼完全比對，對應 `tenants.code`。
+      required: false
+      schema:
+        type: string
+        maxLength: 50
+    TenantNameFilterParam:
+      name: name
+      in: query
+      description: 依租戶名稱完全比對，對應 `tenants.name`。
+      required: false
+      schema:
+        type: string
+        maxLength: 255
+    TenantStatusFilterParam:
+      name: status
+      in: query
+      description: 依啟用狀態篩選，映射 `tenants.enabled`。
+      required: false
+      schema:
+        $ref: "#/components/schemas/TenantStatus"
+    TenantIncludeDeletedParam:
+      name: includeDeleted
+      in: query
+      description: 是否包含已軟刪除 (deleted=true) 的資料，僅限具有稽核權限者使用。
+      required: false
+      schema:
+        type: boolean
+        default: false
+    TenantIdPathParam:
+      name: tenantId
+      in: path
+      description: 租戶唯一識別碼 (`tenants.uid`)。
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 請求參數或內容錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 未通過身分驗證或憑證失效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: 已登入但權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 找不到指定資源
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: 資源狀態衝突（例如租戶代碼或名稱重複、刪除時仍有啟用資源）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: 未預期的伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+        error:
+          type: string
+        code:
+          type: string
+          description: 系統定義錯誤代碼（例如 `TENANT_DUPLICATE_CODE`）。
+        message:
+          type: string
+        path:
+          type: string
+          description: 觸發錯誤的 API 路徑
+        traceId:
+          type: string
+          description: 方便串接觀察性的追蹤 Id
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+    FieldViolation:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          description: 提供除錯用途的原始值（必要時遮蔽）。
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+    Paging:
+      description: 分頁資訊
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    TenantStatus:
+      type: string
+      description: 租戶啟用狀態，對應 `tenants.enabled`。
+      enum:
+        - ENABLED
+        - DISABLED
+    AccountSummary:
+      type: object
+      required:
+        - uid
+        - username
+      properties:
+        uid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+          description: 來源自 `accounts.contact_name`。
+    TenantSummary:
+      type: object
+      required:
+        - uid
+        - name
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        uid:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          $ref: "#/components/schemas/TenantStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    #        deleted:
+    #          type: boolean
+    #          description: 是否已被軟刪除 (對應 `tenants.deleted`)。
+    #        deletedAt:
+    #          type: string
+    #          format: date-time
+    #          nullable: true
+    TenantStatistics:
+      type: object
+      description: 匯總租戶相關資源量測
+      properties:
+        activeAccountCount:
+          type: integer
+          minimum: 0
+        informationSystemCount:
+          type: integer
+          minimum: 0
+        configurationItemCount:
+          type: integer
+          minimum: 0
+    TenantDetail:
+      allOf:
+        - $ref: "#/components/schemas/TenantSummary"
+        - type: object
+          properties:
+            createdBy:
+              $ref: "#/components/schemas/AccountSummary"
+            updatedBy:
+              $ref: "#/components/schemas/AccountSummary"
+    #            statistics:
+    #              $ref: '#/components/schemas/TenantStatistics'
+    CreateTenantsRequest:
+      type: object
+      required:
+        - name
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          description: 平台唯一租戶代碼；若省略將由系統自動產生。
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          $ref: "#/components/schemas/TenantStatus"
+          default: ENABLED
+    UpdateTenantsRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          description: 可選擇更新租戶代碼，需符合唯一性。
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          $ref: "#/components/schemas/TenantStatus"
+    ListTenantsResponse:
+      type: object
+      required:
+        - paging
+        - items
+      properties:
+        paging:
+          $ref: "#/components/schemas/Paging"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantSummary"
