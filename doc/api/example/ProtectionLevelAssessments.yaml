@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
-  title: AR3-ProtectionLevelAssessments 系統防護需求等級評估表管理
+  title: ProtectionLevelAssessments 系統防護需求等級評估表管理
   description: |
     ## API 清單
-    * AR3-ProtectionLevelAssessments-Create 新增防護需求等級評估表
-    * AR3-ProtectionLevelAssessments-Search 查詢防護需求等級評估表清單
-    * AR3-ProtectionLevelAssessments-Read 查詢防護需求等級評估表
-    * AR3-ProtectionLevelAssessments-Update 更新防護需求等級評估表
-    * AR3-ProtectionLevelAssessments-Delete 刪除防護需求等級評估表
-    * AR3-ProtectionLevelAssessments-Export 匯出防護需求等級評估表
+    * ProtectionLevelAssessments-Create 新增防護需求等級評估表
+    * ProtectionLevelAssessments-Search 查詢防護需求等級評估表清單
+    * ProtectionLevelAssessments-Read 查詢防護需求等級評估表
+    * ProtectionLevelAssessments-Update 更新防護需求等級評估表
+    * ProtectionLevelAssessments-Delete 刪除防護需求等級評估表
+    * ProtectionLevelAssessments-Export 匯出防護需求等級評估表
         
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -28,7 +28,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -43,7 +43,7 @@ paths:
       tags:
         - ProtectionLevelAssessments
       summary: 查詢防護需求等級評估表清單
-      operationId: AR3-ProtectionLevelAssessments-Search
+      operationId: ProtectionLevelAssessments-Search
       description: |
         依 `docs/features/系統防護需求等級評估表管理.feature` 的「依條件查詢評估表」、「瀏覽評估表列表分頁」
         以及「清除查詢條件」情境，提供年度、資通系統名稱、資通系統 UID、整體防護等級及表單編號等條件式查詢，
@@ -85,7 +85,7 @@ paths:
       tags:
         - ProtectionLevelAssessments
       summary: 新增防護需求等級評估表
-      operationId: AR3-ProtectionLevelAssessments-Create
+      operationId: ProtectionLevelAssessments-Create
       description: |
         對應 BDD「新增評估表」與「新增評估表時缺少必要欄位」情境，需驗證年度、資通系統、評估日期以及
         五大構面的等級與原因說明。`formNumber` 由後端依年度及流水號自動產生 (唯一約束
@@ -147,7 +147,7 @@ paths:
       tags:
         - ProtectionLevelAssessments
       summary: 查詢防護需求等級評估表
-      operationId: AR3-ProtectionLevelAssessments-Read
+      operationId: ProtectionLevelAssessments-Read
       description: |
         提供「編輯評估表」情境的預填資料，回傳指定評估表的所有欄位，包含表單編號、系統/租戶/評估人資訊、
         各構面防護等級與原因、備註等。
@@ -178,7 +178,7 @@ paths:
       tags:
         - ProtectionLevelAssessments
       summary: 更新防護需求等級評估表
-      operationId: AR3-ProtectionLevelAssessments-Update
+      operationId: ProtectionLevelAssessments-Update
       description: |
         依 BDD「編輯評估表」情境，允許調整評估年度、對應資通系統、評估日期、五大構面的等級與原因，以及備註。
         更新時需檢查 `formNumber` 不可重複、`systemUid` 必須存在且與同一租戶對應，並記錄變更歷程至
@@ -237,7 +237,7 @@ paths:
       tags:
         - ProtectionLevelAssessments
       summary: 刪除防護需求等級評估表
-      operationId: AR3-ProtectionLevelAssessments-Delete
+      operationId: ProtectionLevelAssessments-Delete
       description: |
         對應 BDD「刪除評估表」情境。刪除動作應進行授權檢查並記錄於 `public.account_activity_logs`，實務上
         可採軟刪除 (設定 `deleted` 欄位) 以利追蹤歷史紀錄，或直接移除資料列 (需確保無外鍵引用)。
@@ -265,7 +265,7 @@ paths:
       tags:
         - ProtectionLevelAssessments
       summary: 匯出防護需求等級評估表
-      operationId: AR3-ProtectionLevelAssessments-Export
+      operationId: ProtectionLevelAssessments-Export
       description: |
         對應 BDD「匯出評估表」情境，依目前查詢條件產出 XLSX 檔案。  
         系統應記錄匯出請求與下載者資訊 (`public.account_activity_logs`) 以利稽核。

@@ -1,15 +1,15 @@
 openapi: 3.1.0
 info:
-  title: AR3-Tenants 租戶(客戶)管理
+  title: Tenants 租戶(客戶)管理
   description: |
     在租戶選擇器中實作租戶管理。
 
     ## API 清單
-    * AR3-Tenants-Create 新增租戶(客戶)
-    * AR3-Tenants-Search 查詢租戶(客戶)列表
-    * AR3-Tenants-Read 查詢租戶(客戶)
-    * AR3-Tenants-Update 更新租戶(客戶)
-    * AR3-Tenants-Delete 刪除租戶(客戶)
+    * Tenants-Create 新增租戶(客戶)
+    * Tenants-Search 查詢租戶(客戶)列表
+    * Tenants-Read 查詢租戶(客戶)
+    * Tenants-Update 更新租戶(客戶)
+    * Tenants-Delete 刪除租戶(客戶)
         
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -29,7 +29,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -44,7 +44,7 @@ paths:
       tags:
         - Tenants
       summary: 查詢租戶列表
-      operationId: AR3-Tenants-Search
+      operationId: Tenants-Search
       description: |
         依 `docs/features/租戶管理.feature` 的「依條件查詢租戶列表」、「瀏覽租戶分頁」情境，提供狀態等條件式查詢，並支援關鍵字模糊搜尋。
         資料來源為 `public.tenants`，查詢結果依 `updated_at` DESC、`created_at` DESC 排序；每次查詢需記錄於 `public.account_activity_logs` 以供稽核。
@@ -105,7 +105,7 @@ paths:
       tags:
         - Tenants
       summary: 新增租戶
-      operationId: AR3-Tenants-Create
+      operationId: Tenants-Create
       description: |
         依 `docs/features/租戶管理.feature` 的「新增租戶」情境，建立新的租戶資料。`code` 欄位應保持全域唯一，
         `status` 預設為 ENABLED。成功建立後需回傳完整的租戶內容並寫入 `public.account_activity_logs`。
@@ -148,7 +148,7 @@ paths:
       tags:
         - Tenants
       summary: 查詢租戶
-      operationId: AR3-Tenants-Read
+      operationId: Tenants-Read
       description: |
         用於「檢視/編輯租戶」情境，下鑽 `public.tenants` 單筆資料：
         查詢結果也會記錄於 `public.account_activity_logs`。
@@ -179,7 +179,7 @@ paths:
       tags:
         - Tenants
       summary: 更新租戶
-      operationId: AR3-Tenants-Update
+      operationId: Tenants-Update
       description: |
         對應「更新租戶」情境，可調整租戶名稱、描述與狀態。系統需阻擋重複的 `code`、不允許直接修改已刪除租戶，
         並於成功後回傳更新後內容。
@@ -225,7 +225,7 @@ paths:
       tags:
         - Tenants
       summary: 刪除租戶
-      operationId: AR3-Tenants-Delete
+      operationId: Tenants-Delete
       description: |
         對應「刪除租戶」情境。採軟刪除：將 `public.tenants.deleted` 設為 true 並填入 `deleted_at`，後續查詢需透過
         `includeDeleted=true` 才能檢視。刪除前需確認租戶下所有關聯資源 (帳號、資通系統、組態) 已移轉或停用。

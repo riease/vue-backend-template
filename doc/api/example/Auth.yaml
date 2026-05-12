@@ -1,16 +1,16 @@
 openapi: 3.1.0
 info:
-  title: AR3-Auth 身分驗證模組
+  title: Auth 身分驗證模組
   description: |
     ## API 清單 - 登入前
-    * AR3-Auth-SignIn 登入
-    * AR3-Auth-SignOut 登出
-    * AR3-Auth-Tokens 刷新 Token
-    * AR3-Auth-ForgotPassword 忘記密碼
-    * AR3-Auth-ResetPassword 重設密碼
+    * Auth-SignIn 登入
+    * Auth-SignOut 登出
+    * Auth-Tokens 刷新 Token
+    * Auth-ForgotPassword 忘記密碼
+    * Auth-ResetPassword 重設密碼
 
     ## API 清單 - 登入後
-    * AR3-Auth-SwitchTenant 切換代理租戶(租戶選擇器)
+    * Auth-SwitchTenant 切換代理租戶(租戶選擇器)
 
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，各 API Response Body 統一沿用 `ErrorResponse` 結構：
@@ -31,7 +31,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: https://www.autorisk365.com
+        default: https://api.example.com
       version:
         description: 版號
         default: v1
@@ -48,7 +48,7 @@ paths:
       tags:
         - Authentication
       summary: 使用者登入
-      operationId: AR3-Auth-SignIn
+      operationId: Auth-SignIn
       description: |
         驗證帳號與密碼並建立 Access/Refresh Token。成功登入會寫入 `account_tokens` 與 `account_activity_logs`
         （參考 `docs/DB/database-schema.sql`），同時回傳目前登入者的 `accounts` 資料。登入請求僅需帳號、
@@ -104,7 +104,7 @@ paths:
       tags:
         - Authentication
       summary: 發送忘記密碼重設連結
-      operationId: AR3-Auth-ForgotPassword
+      operationId: Auth-ForgotPassword
       description: |
         依登入識別資訊尋找 `accounts`，若帳號存在則建立 `account_password_events` 的 FORGOT_PASSWORD 事件並生成
         限時 Reset Token，透過電子郵件寄送重設連結。`identifier` 僅支援傳入帳號（對應 `accounts.username`），
@@ -128,7 +128,7 @@ paths:
                   identifier: admin
                   cfToken: 3x00000000000000000000FF
                   locale: zh-TW
-                  resetRedirectUrl: https://portal.autorisk365.com/reset-password
+                  resetRedirectUrl: https://portal.example.com/reset-password
       responses:
         "202":
           description: 接受忘記密碼請求，非同步寄出重設密碼通知
@@ -146,7 +146,7 @@ paths:
       tags:
         - Authentication
       summary: 使用 Reset Token 設定新密碼
-      operationId: AR3-Auth-ResetPassword
+      operationId: Auth-ResetPassword
       description: |
         透過忘記密碼流程寄出的 Reset Token 驗證呼叫者身份，成功後更新 `accounts.password_hash` 並於
         `account_password_events` 建立 RESET_PASSWORD 事件，並記錄執行來源以利稽核。Token 僅能使用一次，
@@ -184,7 +184,7 @@ paths:
       tags:
         - Authentication
       summary: 登出並撤銷 Token
-      operationId: AR3-Auth-SignOut
+      operationId: Auth-SignOut
       description: |
         使用 Access Token 身分登出。
 
@@ -234,7 +234,7 @@ paths:
     #      tags:
     #        - Authentication
     #      summary: 查詢本人 Token 列表
-    #      operationId: AR3-Auth-Token
+    #      operationId: Auth-Token
     #      description: |
     #        回傳 `account_tokens` 中尚未過期或最近已撤銷的 Token，可用於「強制登出其他裝置」等功能。
     #        查詢結果包含 `token_id`、來源裝置、IP 與失效時間。支援依 Token 類型與是否包含已撤銷資料篩選。
@@ -298,7 +298,7 @@ paths:
       tags:
         - Authentication
       summary: 使用 Refresh Token 換發新的 Access Token
-      operationId: AR3-Auth-Tokens
+      operationId: Auth-Tokens
       description: |
         驗證 Refresh Token 是否存在於 `account_tokens` 並未撤銷，若仍有效則同時換發新的 Access Token 及 Refresh Token。
 
@@ -351,7 +351,7 @@ paths:
       tags:
         - Switch Tenant
       summary: 切換擇代理租戶
-      operationId: AR3-Auth-SwitchTenant
+      operationId: Auth-SwitchTenant
       description: |
         讓具備平台管理員權限的使用者切換支援中的租戶身分，後端會驗證 `tenantUid`
         是否存在於 `tenants` 並檢查呼叫者的角色。成功後會產生一組帶有新租戶宣告的

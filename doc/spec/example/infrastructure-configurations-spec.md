@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-InfrastructureConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-InfrastructureConfigurations.yaml)
+- **API 規格檔案**: [`InfrastructureConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/InfrastructureConfigurations.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/infrastructure-configurations`
 

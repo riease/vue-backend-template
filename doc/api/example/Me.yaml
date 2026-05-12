@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: AR3-Me 個人資料管理模組
+  title: Me 個人資料管理模組
   description: |
     ## API 清單
-    * AR3-Me-Read 查詢個人資料
-    * AR3-Me-Update 編輯個人資料
-    * AR3-Me-ChangePassword 變更個人密碼
+    * Me-Read 查詢個人資料
+    * Me-Update 編輯個人資料
+    * Me-ChangePassword 變更個人密碼
 
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，各 API Response Body 統一沿用 `ErrorResponse` 結構：
@@ -26,7 +26,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: https://www.autorisk365.com
+        default: https://api.example.com
       version:
         description: 版號
         default: v1
@@ -41,7 +41,7 @@ paths:
       tags:
         - Account
       summary: 查詢本人基本資料
-      operationId: AR3-Me-Read
+      operationId: Me-Read
       description: |
         回傳 `accounts` 及關聯 `roles`、`tenants` 的摘要資訊，供前端顯示登入者資料與權限。
       parameters:
@@ -65,7 +65,7 @@ paths:
       tags:
         - Account
       summary: 編輯本人基本資料
-      operationId: AR3-Me-Update
+      operationId: Me-Update
       description: |
         更新聯絡資訊與偏好設定。欄位定義對應 `accounts.contact_name`、`accounts.email`，
         並對應 BDD 中「編輯現有使用者帳號」場景。
@@ -107,7 +107,7 @@ paths:
       tags:
         - Account
       summary: 變更本人密碼
-      operationId: AR3-Me-ChangePassword
+      operationId: Me-ChangePassword
       description: |
         驗證舊密碼、比對新密碼與確認密碼是否一致（對應 BDD「建立帳號時密碼與確認密碼不一致」情境），
         成功後更新 `accounts.password_hash` 並留下 `account_password_events` 紀錄。密碼格式遵守 12 碼以上且需包含

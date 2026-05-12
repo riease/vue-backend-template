@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: AR3-SystemChecklists 資通系統防護基準檢核表管理
+  title: SystemChecklists 資通系統防護基準檢核表管理
   description: |
     ## API 清單
-    * AR3-SystemChecklists-Search 查詢資通系統防護基準檢核表列表
-    * AR3-SystemChecklists-Read 查詢單一資通系統的防護基準檢核表
-    * AR3-SystemChecklists-Update 更新資通系統防護基準檢核表
-    * AR3-SystemChecklists-Export 匯出資通系統防護基準檢核表
-    * AR3-SystemChecklists-ExportSummary 匯出資通系統防護基準評鑑結果分析
+    * SystemChecklists-Search 查詢資通系統防護基準檢核表列表
+    * SystemChecklists-Read 查詢單一資通系統的防護基準檢核表
+    * SystemChecklists-Update 更新資通系統防護基準檢核表
+    * SystemChecklists-Export 匯出資通系統防護基準檢核表
+    * SystemChecklists-ExportSummary 匯出資通系統防護基準評鑑結果分析
 
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -28,7 +28,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -43,7 +43,7 @@ paths:
     #      tags:
     #        - SystemChecklists
     #      summary: 新增資通系統防護基準檢核表
-    #      operationId: AR3-SystemChecklists-Create
+    #      operationId: SystemChecklists-Create
     #      description: |
     #        對應原型 `prototype/system_checklist_add.html` 的新增功能。
     #        建立新的檢核表時，系統會依據指定的資通系統 (system_uid) 自動帶入：
@@ -85,7 +85,7 @@ paths:
       tags:
         - SystemChecklists
       summary: 查詢資通系統防護基準檢核表列表
-      operationId: AR3-SystemChecklists-Search
+      operationId: SystemChecklists-Search
       description: |
         對應原型 `prototype/system_checklist.html` 的查詢功能。
         查詢結果以「防護基準檢核表 (system_checklists)」為主表，回傳列表包含：
@@ -126,7 +126,7 @@ paths:
       tags:
         - SystemChecklists
       summary: 查詢單一資通系統的防護基準檢核表
-      operationId: AR3-SystemChecklists-Read
+      operationId: SystemChecklists-Read
       description: |
         對應原型 `prototype/system_checklist_add.html` 的編輯畫面載入。
         依主表 `system_checklists.uid` 取得檢核表抬頭資訊：
@@ -164,7 +164,7 @@ paths:
       tags:
         - SystemChecklists
       summary: 更新資通系統防護基準檢核表
-      operationId: AR3-SystemChecklists-Update
+      operationId: SystemChecklists-Update
       description: |
         對應原型 `prototype/system_checklist_add.html` 的「送出」按鈕。
         更新檢核表抬頭欄位 (評估日期、承辦單位、承辦人姓名) 與所有檢核項目的狀態及備註。
@@ -215,7 +215,7 @@ paths:
   #      tags:
   #        - SystemChecklists
   #      summary: 刪除資通系統防護基準檢核表
-  #      operationId: AR3-SystemChecklists-Delete
+  #      operationId: SystemChecklists-Delete
   #      description: |
   #        對應原型 `prototype/system_checklist.html` 的刪除功能。
   #        刪除指定的檢核表及其所有子項目 (system_checklist_controls)。
@@ -243,7 +243,7 @@ paths:
       tags:
         - SystemChecklists
       summary: 匯出資通系統防護基準檢核表
-      operationId: AR3-SystemChecklists-Export
+      operationId: SystemChecklists-Export
       description: |
         對應原型 `prototype/system_checklist.html` 的「匯出資通系統防護基準檢核表」按鈕。
         依查詢鍵值輸出 XLSX 檔案，每筆列出檢核表抬頭資訊與子表控制項結果，
@@ -285,7 +285,7 @@ paths:
       tags:
         - SystemChecklists
       summary: 匯出資通系統防護基準評鑑結果分析
-      operationId: AR3-SystemChecklists-ExportSummary
+      operationId: SystemChecklists-ExportSummary
       description: |
         對應原型 `prototype/system_checklist.html` 的「匯出資通系統防護基準評鑑結果分析」按鈕。
         依篩選條件匯出控制措施 × 系統的矩陣結果，供橫向比較與彙整分析。

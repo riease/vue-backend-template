@@ -1,21 +1,21 @@
-# 軟體組態管理 功能規格單
+# 組織組態管理 功能規格單
 
 ## 📋 基本資訊
 
 | 項目 | 內容 |
 |------|------|
-| 功能英文前綴字 | `SoftwareConfigurations` |
+| 功能英文前綴字 | `PeopleConfigurations` |
 | 版本號碼 | 1.0.0 |
 | 建立日期 | 2026-02-06 |
 | 最後更新日期 | 2026-02-06 |
 | 負責人員 | - |
-| 相關需求文件 | `docs/features/軟體組態管理.feature` |
+| 相關需求文件 | `docs/features/組織組態管理.feature` |
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-SoftwareConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-SoftwareConfigurations.yaml)
+- **API 規格檔案**: [`PeopleConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/PeopleConfigurations.yaml)
 - **API 版本**: 1.0.0
-- **Base URL**: `{baseUrl}/api/{version}/software-configurations`
+- **Base URL**: `{baseUrl}/api/{version}/people-configurations`
 
 ## 🎯 功能操作 (Actions)
 
@@ -26,66 +26,66 @@
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 新增軟體組態 |
-| 所需權限字串 | `softwareconfigurations:create` |
+| 名稱 | 新增組織組態 |
+| 所需權限字串 | `peopleconfigurations:create` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表頁面 |
-| 網址路由 | `/software-configurations/create` |
+| 網址路由 | `/people-configurations/create` |
 | 程式變數名稱 | `handleCreate`, `doCreateClick` |
-| 對應 API Method | POST /api/{version}/software-configurations |
-| 對應 OperationId | `createSoftwareConfiguration` |
+| 對應 API Method | POST /api/{version}/people-configurations |
+| 對應 OperationId | `createPeopleConfiguration` |
 
 ### 查詢
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 查詢軟體組態列表 |
-| 所需權限字串 | `softwareconfigurations:read` |
+| 名稱 | 查詢組織組態列表 |
+| 所需權限字串 | `peopleconfigurations:read` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表頁面 |
-| 網址路由 | `/software-configurations` |
+| 網址路由 | `/people-configurations` |
 | 程式變數名稱 | `handleSearch`, `doSearchClick` |
-| 對應 API Method | GET /api/{version}/software-configurations |
-| 對應 OperationId | `searchSoftwareConfigurations` |
+| 對應 API Method | GET /api/{version}/people-configurations |
+| 對應 OperationId | `searchPeopleConfigurations` |
 
 ### 詳細
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 查詢軟體組態 |
-| 所需權限字串 | `softwareconfigurations:read` |
+| 名稱 | 查詢組織組態 |
+| 所需權限字串 | `peopleconfigurations:read` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表操作欄 |
-| 網址路由 | `/software-configurations/detail/:uid` |
+| 網址路由 | `/people-configurations/detail/:uid` |
 | 程式變數名稱 | `handleRead`, `doReadClick` |
-| 對應 API Method | GET /api/{version}/software-configurations/{uid} |
-| 對應 OperationId | `readSoftwareConfiguration` |
+| 對應 API Method | GET /api/{version}/people-configurations/{uid} |
+| 對應 OperationId | `readOrganizationConfiguration` |
 
 ### 編輯
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 更新軟體組態 |
-| 所需權限字串 | `softwareconfigurations:update` |
+| 名稱 | 更新組織組態 |
+| 所需權限字串 | `peopleconfigurations:update` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表操作欄 |
-| 網址路由 | `/software-configurations/edit/:uid` |
+| 網址路由 | `/people-configurations/edit/:uid` |
 | 程式變數名稱 | `handleUpdate`, `doUpdateClick` |
-| 對應 API Method | PUT /api/{version}/software-configurations/{uid} |
-| 對應 OperationId | `updateSoftwareConfiguration` |
+| 對應 API Method | PUT /api/{version}/people-configurations/{uid} |
+| 對應 OperationId | `updateOrganizationConfiguration` |
 
 ### 刪除
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 刪除軟體組態 |
-| 所需權限字串 | `softwareconfigurations:delete` |
+| 名稱 | 刪除組織組態 |
+| 所需權限字串 | `peopleconfigurations:delete` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表操作欄 |
 | 網址路由 | 無（在當前頁面執行） |
 | 程式變數名稱 | `handleDelete`, `doDeleteClick` |
-| 對應 API Method | DELETE /api/{version}/software-configurations/{uid} |
-| 對應 OperationId | `deleteSoftwareConfiguration` |
+| 對應 API Method | DELETE /api/{version}/people-configurations/{uid} |
+| 對應 OperationId | `deleteOrganizationConfiguration` |
 
 ---
 
@@ -96,7 +96,7 @@
 
 ### 查詢參數
 
-- **Query Parameter 類別**: `SoftwareConfigurationsQueryParameter`
+- **Query Parameter 類別**: `PeopleConfigurationsQueryParameter`
 - **支援的查詢條件**:
   - `configurationCode` (組態編號)
   - `name` (資產名稱)
@@ -131,14 +131,14 @@
 
 | 用途 | 類別名稱 | 檔案路徑 |
 |------|---------|---------|
-| 新增/編輯表單 | `SoftwareConfigurationsDataModel` | `src/model/SoftwareConfigurationsDataModel.ts` |
-| 列表查詢 | `SoftwareConfigurationsListDataModel` | `src/model/SoftwareConfigurationsListDataModel.ts` |
+| 新增/編輯表單 | `PeopleConfigurationsDataModel` | `src/model/PeopleConfigurationsDataModel.ts` |
+| 列表查詢 | `PeopleConfigurationsListDataModel` | `src/model/PeopleConfigurationsListDataModel.ts` |
 
 ### Query Parameters
 
 | 用途 | 類別名稱 | 檔案路徑 |
 |------|---------|---------|
-| 列表查詢 | `SoftwareConfigurationsQueryParameter` | `src/query/SoftwareConfigurationsQueryParameter.ts` |
+| 列表查詢 | `PeopleConfigurationsQueryParameter` | `src/query/PeopleConfigurationsQueryParameter.ts` |
 
 ### Enums
 
@@ -169,8 +169,8 @@
 | 資產名稱 | `name` | 字串 | - | 是 | - |
 | 組態分類 | `category` | 字串 | - | 是 | - |
 | 組態子分類 | `subcategory` | 字串 | - | 是 | - |
+| 資產所在地點 | `location` | 字串 | - | 是 | - |
 | 狀態 | `status` | Enum | - | 是 | - |
-| 關聯資通系統 | `informationSystemUids` | 陣列 | - | 是 | - |
 
 ---
 
@@ -186,14 +186,14 @@
 
 ### 頁面路由
 
-- **列表頁面**: `/software-configurations`
-- **新增頁面**: `/software-configurations/create`
-- **編輯頁面**: `/software-configurations/edit/:uid`
-- **詳細頁面**: `/software-configurations/detail/:uid`
+- **列表頁面**: `/people-configurations`
+- **新增頁面**: `/people-configurations/create`
+- **編輯頁面**: `/people-configurations/edit/:uid`
+- **詳細頁面**: `/people-configurations/detail/:uid`
 
 ### 頁面標題
 
-- **標題**: 軟體組態管理
+- **標題**: 組織組態管理
 
 ---
 

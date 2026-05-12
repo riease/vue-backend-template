@@ -1,6 +1,6 @@
 ---
 name: resolve-api-to-query
-description: Generate TypeScript QueryParameter classes from OpenAPI specifications for AutoRisk-365.
+description: Generate TypeScript QueryParameter classes from OpenAPI specifications for Vue Backend Template.
 ---
 
 # resolve-api-to-query

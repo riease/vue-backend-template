@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-SystemChecklists.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-SystemChecklists.yaml)
+- **API 規格檔案**: [`SystemChecklists.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/SystemChecklists.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/system-checklists`
 
@@ -33,7 +33,7 @@
 | 網址路由 | `/system-checklists` |
 | 程式變數名稱 | `handleSearch`, `doSearchClick` |
 | 對應 API Method | GET /api/{version}/system-checklists |
-| 對應 OperationId | `AR3-SystemChecklists-Search` |
+| 對應 OperationId | `SystemChecklists-Search` |
 
 ### 詳細
 
@@ -46,7 +46,7 @@
 | 網址路由 | `/system-checklists/detail/:checklistUid` |
 | 程式變數名稱 | `handleRead`, `doReadClick` |
 | 對應 API Method | GET /api/{version}/system-checklists/{checklistUid} |
-| 對應 OperationId | `AR3-SystemChecklists-Read` |
+| 對應 OperationId | `SystemChecklists-Read` |
 
 ### 編輯
 
@@ -59,7 +59,7 @@
 | 網址路由 | `/system-checklists/edit/:checklistUid` |
 | 程式變數名稱 | `handleUpdate`, `doUpdateClick` |
 | 對應 API Method | PUT /api/{version}/system-checklists/{checklistUid} |
-| 對應 OperationId | `AR3-SystemChecklists-Update` |
+| 對應 OperationId | `SystemChecklists-Update` |
 
 ### 匯出
 
@@ -72,7 +72,7 @@
 | 網址路由 | 無（觸發下載） |
 | 程式變數名稱 | `handleExport`, `doExportClick` |
 | 對應 API Method | GET /api/{version}/system-checklists/export |
-| 對應 OperationId | `AR3-SystemChecklists-Export` |
+| 對應 OperationId | `SystemChecklists-Export` |
 
 ### 匯出統計
 
@@ -85,7 +85,7 @@
 | 網址路由 | 無（觸發下載） |
 | 程式變數名稱 | `handleExportSummary`, `doExportSummaryClick` |
 | 對應 API Method | GET /api/{version}/system-checklists/export-summary |
-| 對應 OperationId | `AR3-SystemChecklists-ExportSummary` |
+| 對應 OperationId | `SystemChecklists-ExportSummary` |
 
 ---
 

@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
-  title: AR3-Accounts 帳號管理
+  title: Accounts 帳號管理
   description: |
     ## API 清單
-    * AR3-Accounts-Create 新增帳號
-    * AR3-Accounts-Search 查詢帳號清單
-    * AR3-Accounts-Read 查詢帳號
-    * AR3-Accounts-Update 更新帳號
-    * AR3-Accounts-Delete 刪除帳號
-    * AR3-Accounts-ChangePassword 變更帳號密碼
+    * Accounts-Create 新增帳號
+    * Accounts-Search 查詢帳號清單
+    * Accounts-Read 查詢帳號
+    * Accounts-Update 更新帳號
+    * Accounts-Delete 刪除帳號
+    * Accounts-ChangePassword 變更帳號密碼
         
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -28,7 +28,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -43,7 +43,7 @@ paths:
       tags:
         - Accounts
       summary: 查詢帳號清單
-      operationId: AR3-Accounts-Search
+      operationId: Accounts-Search
       description: |
         依照 `docs/features/帳號管理.feature` 中的「依條件篩選帳號列表」情境，提供角色、帳號與啟用狀態等條件式查詢，並支援分頁。
         後端資料來源為 `public.accounts` (結合 `public.roles`、`public.tenants`)；查詢紀錄會寫入
@@ -110,7 +110,7 @@ paths:
       tags:
         - Accounts
       summary: 新增帳號
-      operationId: AR3-Accounts-Create
+      operationId: Accounts-Create
       description: |
         新增帳號必須符合 `docs/features/帳號管理.feature` 的必填欄位規則，並落入 `public.accounts`
         （含 `username` 唯一性限制）。建立成功後應記錄於 `public.account_activity_logs`，密碼雜湊及策略事件
@@ -162,7 +162,7 @@ paths:
       tags:
         - Accounts
       summary: 查詢帳號
-      operationId: AR3-Accounts-Read
+      operationId: Accounts-Read
       description: |
         用於「編輯現有使用者帳號」情境中的預填資料，回傳 `public.accounts`、`public.roles` 與 `public.tenants`
         的整合資訊。
@@ -192,7 +192,7 @@ paths:
       tags:
         - Accounts
       summary: 更新帳號
-      operationId: AR3-Accounts-Update
+      operationId: Accounts-Update
       description: |
         更新角色、聯絡資訊或狀態，不含密碼（另見 ChangePassword）。`username` 為唯讀；若狀態為停用需同步更新
         `accounts.enabled=false`。異動會寫入 `public.account_activity_logs`。
@@ -242,7 +242,7 @@ paths:
       tags:
         - Accounts
       summary: 刪除帳號
-      operationId: AR3-Accounts-Delete
+      operationId: Accounts-Delete
       description: |
         對應「刪除使用者帳號」情境。預設為軟刪除：移除 `accounts` 資料或標記為停用，並要求前端刷新列表。
       parameters:
@@ -267,7 +267,7 @@ paths:
       tags:
         - Accounts
       summary: 管理員變更帳號密碼
-      operationId: AR3-Accounts-ChangePassword
+      operationId: Accounts-ChangePassword
       description: |
         依 `docs/features/帳號管理.feature` 的密碼驗證情境，為指定帳號設定新密碼。系統需驗證確認密碼、套用密碼策略，並於
         `public.account_password_events` 建立事件，同時記錄於 `public.account_activity_logs`。

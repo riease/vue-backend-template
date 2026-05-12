@@ -1,21 +1,21 @@
-# 資訊組態管理 功能規格單
+# 軟體組態管理 功能規格單
 
 ## 📋 基本資訊
 
 | 項目 | 內容 |
 |------|------|
-| 功能英文前綴字 | `InformationConfigurations` |
+| 功能英文前綴字 | `SoftwareConfigurations` |
 | 版本號碼 | 1.0.0 |
 | 建立日期 | 2026-02-06 |
 | 最後更新日期 | 2026-02-06 |
 | 負責人員 | - |
-| 相關需求文件 | `docs/features/資訊組態管理.feature` |
+| 相關需求文件 | `docs/features/軟體組態管理.feature` |
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-InformationConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-InformationConfigurations.yaml)
+- **API 規格檔案**: [`SoftwareConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/SoftwareConfigurations.yaml)
 - **API 版本**: 1.0.0
-- **Base URL**: `{baseUrl}/api/{version}/information-configurations`
+- **Base URL**: `{baseUrl}/api/{version}/software-configurations`
 
 ## 🎯 功能操作 (Actions)
 
@@ -26,66 +26,66 @@
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 新增資訊組態 |
-| 所需權限字串 | `informationconfigurations:create` |
+| 名稱 | 新增軟體組態 |
+| 所需權限字串 | `softwareconfigurations:create` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表頁面 |
-| 網址路由 | `/information-configurations/create` |
+| 網址路由 | `/software-configurations/create` |
 | 程式變數名稱 | `handleCreate`, `doCreateClick` |
-| 對應 API Method | POST /api/{version}/information-configurations |
-| 對應 OperationId | `createInformationConfiguration` |
+| 對應 API Method | POST /api/{version}/software-configurations |
+| 對應 OperationId | `createSoftwareConfiguration` |
 
 ### 查詢
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 查詢資訊組態列表 |
-| 所需權限字串 | `informationconfigurations:read` |
+| 名稱 | 查詢軟體組態列表 |
+| 所需權限字串 | `softwareconfigurations:read` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表頁面 |
-| 網址路由 | `/information-configurations` |
+| 網址路由 | `/software-configurations` |
 | 程式變數名稱 | `handleSearch`, `doSearchClick` |
-| 對應 API Method | GET /api/{version}/information-configurations |
-| 對應 OperationId | `searchInformationConfigurations` |
+| 對應 API Method | GET /api/{version}/software-configurations |
+| 對應 OperationId | `searchSoftwareConfigurations` |
 
 ### 詳細
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 查詢資訊組態 |
-| 所需權限字串 | `informationconfigurations:read` |
+| 名稱 | 查詢軟體組態 |
+| 所需權限字串 | `softwareconfigurations:read` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表操作欄 |
-| 網址路由 | `/information-configurations/detail/:uid` |
+| 網址路由 | `/software-configurations/detail/:uid` |
 | 程式變數名稱 | `handleRead`, `doReadClick` |
-| 對應 API Method | GET /api/{version}/information-configurations/{uid} |
-| 對應 OperationId | `readInformationConfiguration` |
+| 對應 API Method | GET /api/{version}/software-configurations/{uid} |
+| 對應 OperationId | `readSoftwareConfiguration` |
 
 ### 編輯
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 更新資訊組態 |
-| 所需權限字串 | `informationconfigurations:update` |
+| 名稱 | 更新軟體組態 |
+| 所需權限字串 | `softwareconfigurations:update` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表操作欄 |
-| 網址路由 | `/information-configurations/edit/:uid` |
+| 網址路由 | `/software-configurations/edit/:uid` |
 | 程式變數名稱 | `handleUpdate`, `doUpdateClick` |
-| 對應 API Method | PUT /api/{version}/information-configurations/{uid} |
-| 對應 OperationId | `updateInformationConfiguration` |
+| 對應 API Method | PUT /api/{version}/software-configurations/{uid} |
+| 對應 OperationId | `updateSoftwareConfiguration` |
 
 ### 刪除
 
 | 項目 | 內容 |
 |------|------|
-| 名稱 | 刪除資訊組態 |
-| 所需權限字串 | `informationconfigurations:delete` |
+| 名稱 | 刪除軟體組態 |
+| 所需權限字串 | `softwareconfigurations:delete` |
 | 特殊啟用條件 | 無 |
 | 功能呈現位置 | 列表操作欄 |
 | 網址路由 | 無（在當前頁面執行） |
 | 程式變數名稱 | `handleDelete`, `doDeleteClick` |
-| 對應 API Method | DELETE /api/{version}/information-configurations/{uid} |
-| 對應 OperationId | `deleteInformationConfiguration` |
+| 對應 API Method | DELETE /api/{version}/software-configurations/{uid} |
+| 對應 OperationId | `deleteSoftwareConfiguration` |
 
 ---
 
@@ -96,11 +96,10 @@
 
 ### 查詢參數
 
-- **Query Parameter 類別**: `InformationConfigurationsQueryParameter`
+- **Query Parameter 類別**: `SoftwareConfigurationsQueryParameter`
 - **支援的查詢條件**:
   - `configurationCode` (組態編號)
   - `name` (資產名稱)
-  - `containsPersonalData` (是否含有個人資料)
   - `subcategory` (子類別)
   - `status` (狀態)
   - `limit` (筆數)
@@ -119,7 +118,6 @@
 | 資產名稱 | `name` | `Text` | - |
 | 組態類別 | `categoryDisplayName` | `Text` | - |
 | 組態子類別 | `subcategoryDisplayName` | `Text` | - |
-| 含個資 | `containsPersonalData` | `Text` | - |
 | 狀態 | `status` | `Text` | - |
 | 建立時間 | `createdAt` | `Date` | - |
 | 更新時間 | `updatedAt` | `Date` | - |
@@ -133,14 +131,14 @@
 
 | 用途 | 類別名稱 | 檔案路徑 |
 |------|---------|---------|
-| 新增/編輯表單 | `InformationConfigurationsDataModel` | `src/model/InformationConfigurationsDataModel.ts` |
-| 列表查詢 | `InformationConfigurationsListDataModel` | `src/model/InformationConfigurationsListDataModel.ts` |
+| 新增/編輯表單 | `SoftwareConfigurationsDataModel` | `src/model/SoftwareConfigurationsDataModel.ts` |
+| 列表查詢 | `SoftwareConfigurationsListDataModel` | `src/model/SoftwareConfigurationsListDataModel.ts` |
 
 ### Query Parameters
 
 | 用途 | 類別名稱 | 檔案路徑 |
 |------|---------|---------|
-| 列表查詢 | `InformationConfigurationsQueryParameter` | `src/query/InformationConfigurationsQueryParameter.ts` |
+| 列表查詢 | `SoftwareConfigurationsQueryParameter` | `src/query/SoftwareConfigurationsQueryParameter.ts` |
 
 ### Enums
 
@@ -171,8 +169,6 @@
 | 資產名稱 | `name` | 字串 | - | 是 | - |
 | 組態分類 | `category` | 字串 | - | 是 | - |
 | 組態子分類 | `subcategory` | 字串 | - | 是 | - |
-| 保存位置 | `storageLocation` | 字串 | - | 是 | - |
-| 含個資 | `containsPersonalData` | 布林 | - | 是 | - |
 | 狀態 | `status` | Enum | - | 是 | - |
 | 關聯資通系統 | `informationSystemUids` | 陣列 | - | 是 | - |
 
@@ -190,14 +186,14 @@
 
 ### 頁面路由
 
-- **列表頁面**: `/information-configurations`
-- **新增頁面**: `/information-configurations/create`
-- **編輯頁面**: `/information-configurations/edit/:uid`
-- **詳細頁面**: `/information-configurations/detail/:uid`
+- **列表頁面**: `/software-configurations`
+- **新增頁面**: `/software-configurations/create`
+- **編輯頁面**: `/software-configurations/edit/:uid`
+- **詳細頁面**: `/software-configurations/detail/:uid`
 
 ### 頁面標題
 
-- **標題**: 資訊組態管理
+- **標題**: 軟體組態管理
 
 ---
 

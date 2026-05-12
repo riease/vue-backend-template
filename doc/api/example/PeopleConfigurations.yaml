@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
-  title: AR3-SoftwareConfigurations 軟體組態管理
+  title: PeopleConfigurations 組織組態管理
   description: |
     ## API 清單
-    * AR3-SoftwareConfigurations-Create 新增軟體組態
-    * AR3-SoftwareConfigurations-Search 查詢軟體組態列表
-    * AR3-SoftwareConfigurations-Read 查詢軟體組態
-    * AR3-SoftwareConfigurations-Update 更新軟體組態
-    * AR3-SoftwareConfigurations-Delete 刪除軟體組態
-
+    * PeopleConfigurations-Create 新增組織組態
+    * PeopleConfigurations-Search 查詢組織組態列表
+    * PeopleConfigurations-Read 查詢組織組態
+    * PeopleConfigurations-Update 更新組織組態
+    * PeopleConfigurations-Delete 刪除組織組態
+        
     ## 非200狀態回應說明
     目前定義的異常狀態如下，以下狀態於各API回應內容格式皆相同，因此各API預設只描述正常 200 的回應情況。
     * 請求格式錯誤。 http status code 400。
@@ -19,22 +19,22 @@ info:
     * 伺服端錯誤。 http status code 500。
   version: 1.0.0
 servers:
-  - url: "{baseUrl}/api/{version}/software-configurations"
+  - url: "{baseUrl}/api/{version}/people-configurations"
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
 paths:
   /:
     post:
-      operationId: createSoftwareConfiguration
-      summary: AR3-SoftwareConfigurations-Create 新增軟體組態
-      description: 新增一筆軟體組態資料
+      operationId: createPeopleConfiguration
+      summary: PeopleConfigurations-Create 新增組織組態
+      description: 新增一筆組織組態資料
       tags:
-        - SoftwareConfigurations
+        - PeopleConfigurations
       #      parameters:
       #        - $ref: '#/components/parameters/XTenantUidHeader'
       requestBody:
@@ -42,20 +42,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSoftwareConfigurationRequest"
+              $ref: "#/components/schemas/CreateOrganizationConfigurationRequest"
       responses:
         "200":
-          description: 成功新增軟體組態
+          description: 成功新增組織組態
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoftwareConfigurationDetail"
+                $ref: "#/components/schemas/OrganizationConfigurationDetail"
     get:
-      operationId: searchSoftwareConfigurations
-      summary: AR3-SoftwareConfigurations-Search 查詢軟體組態列表
-      description: 依條件查詢軟體組態列表，支援分頁
+      operationId: searchPeopleConfigurations
+      summary: PeopleConfigurations-Search 查詢組織組態列表
+      description: 依條件查詢組織組態列表，支援分頁
       tags:
-        - SoftwareConfigurations
+        - PeopleConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - name: configurationCode
@@ -64,14 +64,14 @@ paths:
           required: false
           schema:
             type: string
-            example: "SW-3-1"
+            example: "PE-1-1-001"
         - name: name
           in: query
           description: 資產名稱 (支援模糊查詢)
           required: false
           schema:
             type: string
-            example: "CentOS"
+            example: "資訊安全組織角色名稱"
         #        - $ref: '#/components/parameters/CategoryFilterParam'
         - $ref: "#/components/parameters/SubcategoryFilterParam"
         - $ref: "#/components/parameters/StatusFilterParam"
@@ -81,11 +81,11 @@ paths:
         - $ref: "#/components/parameters/SortOrderParam"
       responses:
         "200":
-          description: 軟體組態分頁結果
+          description: 組織組態分頁結果
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoftwareConfigurationListResponse"
+                $ref: "#/components/schemas/OrganizationConfigurationListResponse"
               examples:
                 default:
                   summary: 依子類別與狀態查詢
@@ -95,49 +95,49 @@ paths:
                       offset: 0
                       total: 2
                     items:
-                      - uid: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-                        configurationCode: SW-3-1-001
-                        name: CentOS
-                        category: SOFTWARE
-                        subcategory: OS
-                        categoryDisplayName: "SOFTWARE,SW"
-                        subcategoryDisplayName: "3-1 作業系統"
+                      - uid: 12345678-1234-1234-1234-1234567890ab
+                        configurationCode: PE-1-1-001
+                        name: 資安組織職責
+                        category: ORGANIZATION
+                        subcategory: ROLE
+                        categoryDisplayName: "ORGANIZATION,PE"
+                        subcategoryDisplayName: "1-1 組織職責"
                         status: ENABLED
                         createdAt: 2024-03-01T02:00:00Z
                         updatedAt: 2024-04-05T07:30:00Z
-                      - uid: ffffffff-1111-2222-3333-444444444444
-                        configurationCode: SW-3-1-002
-                        name: Ubuntu
-                        category: SOFTWARE
-                        subcategory: OS
-                        categoryDisplayName: "SOFTWARE,SW"
-                        subcategoryDisplayName: "3-1 作業系統"
+                      - uid: 22345678-1234-1234-1234-1234567890ab
+                        configurationCode: PE-1-1-002
+                        name: 資安委員會
+                        category: ORGANIZATION
+                        subcategory: ROLE
+                        categoryDisplayName: "ORGANIZATION,PE"
+                        subcategoryDisplayName: "1-1 組織職責"
                         status: DISABLED
                         createdAt: 2024-02-10T05:12:00Z
                         updatedAt: 2024-02-20T03:45:00Z
   /{uid}:
     get:
-      operationId: readSoftwareConfiguration
-      summary: AR3-SoftwareConfigurations-Read 查詢軟體組態
-      description: 依 UID 查詢單筆軟體組態詳細資料
+      operationId: readOrganizationConfiguration
+      summary: PeopleConfigurations-Read 查詢組織組態
+      description: 依 UID 查詢單筆組織組態詳細資料
       tags:
-        - SoftwareConfigurations
+        - PeopleConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - $ref: "#/components/parameters/UidPath"
       responses:
         "200":
-          description: 成功查詢軟體組態
+          description: 成功查詢組織組態
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoftwareConfigurationDetail"
+                $ref: "#/components/schemas/OrganizationConfigurationDetail"
     put:
-      operationId: updateSoftwareConfiguration
-      summary: AR3-SoftwareConfigurations-Update 更新軟體組態
-      description: 更新單筆軟體組態資料
+      operationId: updateOrganizationConfiguration
+      summary: PeopleConfigurations-Update 更新組織組態
+      description: 更新單筆組織組態資料
       tags:
-        - SoftwareConfigurations
+        - PeopleConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - $ref: "#/components/parameters/UidPath"
@@ -146,20 +146,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateSoftwareConfigurationRequest"
+              $ref: "#/components/schemas/UpdateOrganizationConfigurationRequest"
       responses:
         "200":
-          description: 成功更新軟體組態
+          description: 成功更新組織組態
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SoftwareConfigurationDetail"
+                $ref: "#/components/schemas/OrganizationConfigurationDetail"
     delete:
-      operationId: deleteSoftwareConfiguration
-      summary: AR3-SoftwareConfigurations-Delete 刪除軟體組態
-      description: 軟刪除單筆軟體組態資料 (設定 deleted=true)
+      operationId: deleteOrganizationConfiguration
+      summary: PeopleConfigurations-Delete 刪除組織組態
+      description: 軟刪除單筆組織組態資料 (設定 deleted=true)
       tags:
-        - SoftwareConfigurations
+        - PeopleConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - $ref: "#/components/parameters/UidPath"
@@ -219,6 +219,30 @@ components:
       required: false
       schema:
         $ref: "#/components/schemas/ConfigurationStatus"
+    SortByParam:
+      name: sortBy
+      in: query
+      description: 排序欄位，預設 `configurationCode`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - configurationCode
+          - name
+          - subcategory
+          - status
+        default: configurationCode
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      description: 排序方向，預設 `ASC`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+        default: ASC
     LimitParam:
       name: limit
       in: query
@@ -238,78 +262,53 @@ components:
         type: integer
         minimum: 0
         default: 0
-    SortByParam:
-      name: sortBy
-      in: query
-      description: 排序欄位，預設 `configurationCode`。
-      required: false
-      schema:
-        type: string
-        enum:
-          - configurationCode
-          - name
-          - subcategory
-          - status
-          - createdAt
-        default: configurationCode
-    SortOrderParam:
-      name: sortOrder
-      in: query
-      description: 排序方向，預設 `ASC` (組態編號由小到大)。
-      required: false
-      schema:
-        type: string
-        enum:
-          - ASC
-          - DESC
-        default: ASC
   schemas:
     # ==================== 請求 Schemas ====================
-    BaseSoftwareConfigurationRequest:
+    BaseOrganizationConfigurationRequest:
       type: object
-      description: 軟體組態請求資料
+      description: 組織組態請求資料
       required:
         - configurationCode
         - name
         - category
         - subcategory
-        - informationSystemUids
+        - location
         - status
       properties:
         configurationCode:
           type: string
           maxLength: 100
-          description: 組態編號 (例如：SW-3-1-001)
-          example: "SW-3-1-001"
+          description: 組態編號 (例如：PE-1-1-001)
+          example: "PE-1-1-001"
         name:
           type: string
           maxLength: 255
           description: 資產名稱
-          example: "CentOS7"
+          example: "資訊安全組織角色名稱"
         description:
           type: string
           description: 組態項目的詳細說明
-          example: "作業系統"
+          example: "內部人員角色"
         category:
           type: string
           maxLength: 100
-          description: 組態分類 (例如：4 Software,SW)
-          example: "4 Software,SW"
+          description: 組態分類 (例如：1 People,PE)
+          example: "1 People,PE"
         subcategory:
           type: string
           maxLength: 100
-          description: 組態子分類 (例如：Operating System)
-          example: "Operating System"
+          description: 組態子分類 (例如：內部人員、外部人員)
+          example: "內部人員"
         model:
           type: string
           maxLength: 255
           description: 資產型號
-          example: "CentOS 7.9"
+          example: "資訊安全組織角色"
         responsibleDepartment:
           type: string
           maxLength: 255
           description: 權責部門名稱
-          example: "資訊部"
+          example: "資訊安全處"
         responsibleManager:
           type: string
           maxLength: 255
@@ -323,74 +322,59 @@ components:
         #        assetCustodian:
         #          type: string
         #          maxLength: 255
-        #          description: 資產管理者/保管人
-        #          example: "陳美玲"
-        #        location:
-        #          type: string
-        #          maxLength: 255
-        #          description: 資產所在地點
-        #          example: "機房A區"
+        #          description: 資產管理者/保管人 (原型未顯示)
+        location:
+          type: string
+          maxLength: 255
+          description: 資產所在地點
+          example: "總部"
         #        ownerUid:
         #          type: string
         #          format: uuid
-        #          description: 此資產的負責人 UID (關聯到 accounts)
+        #          description: 此資產的負責人 UID (原型未顯示)
         #        departmentUid:
         #          type: string
         #          format: uuid
-        #          description: 此資產所屬的部門 UID (關聯到 departments)
+        #          description: 此資產所屬的部門 UID (原型未顯示)
         status:
           $ref: "#/components/schemas/ConfigurationStatus"
         note:
           type: string
           description: 備註
-          example: "測試環境使用"
-        #        version:
-        #          type: string
-        #          maxLength: 100
-        #          description: 軟體版本
-        #          example: "7.9.2009"
-        #        vendor:
-        #          type: string
-        #          maxLength: 255
-        #          description: 供應商
-        #          example: "Red Hat"
-        #        licenseKey:
-        #          type: string
-        #          description: 授權金鑰
-        #        installDate:
-        #          type: string
-        #          format: date
-        #          description: 安裝日期
-        #          example: "2024-01-15"
-        informationSystemUids:
-          description: 關聯的資通系統 UID 清單
-          type: array
-          items:
-            type: string
-            format: uuid
-            description: 關聯資通系統 UID
-            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-    CreateSoftwareConfigurationRequest:
+          example: "委外人員角色"
+    #        headcount:
+    #          type: integer
+    #          minimum: 0
+    #          description: 人員數量 (DB 欄位，原型未顯示)
+    CreateOrganizationConfigurationRequest:
       allOf:
-        - $ref: "#/components/schemas/BaseSoftwareConfigurationRequest"
-    UpdateSoftwareConfigurationRequest:
+        - $ref: "#/components/schemas/BaseOrganizationConfigurationRequest"
+    UpdateOrganizationConfigurationRequest:
       allOf:
-        - $ref: "#/components/schemas/BaseSoftwareConfigurationRequest"
+        - $ref: "#/components/schemas/BaseOrganizationConfigurationRequest"
     # ==================== 回應 Schemas ====================
-    SoftwareConfigurationSummary:
+    PeopleConfigurationsummary:
       type: object
-      description: 軟體組態列表項目（簡化版）
+      description: 組織組態列表項目（簡化版）
       properties:
         uid:
           type: string
           format: uuid
-          description: 軟體組態的唯一識別碼
+          description: 組織組態的唯一識別碼
         configurationCode:
           type: string
           description: 組態編號
         name:
           type: string
           description: 資產名稱
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間 (ISO 8601)
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新時間 (ISO 8601)
         category:
           type: string
           description: 組態分類
@@ -405,15 +389,7 @@ components:
           description: 組態子類別顯示名稱(項次 名稱)
         status:
           $ref: "#/components/schemas/ConfigurationStatus"
-        createdAt:
-          type: string
-          format: date-time
-          description: 建立時間 (ISO 8601)
-        updatedAt:
-          type: string
-          format: date-time
-          description: 更新時間 (ISO 8601)
-    SoftwareConfigurationListResponse:
+    OrganizationConfigurationListResponse:
       type: object
       required:
         - paging
@@ -424,12 +400,12 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/SoftwareConfigurationSummary"
-    SoftwareConfigurationDetail:
+            $ref: "#/components/schemas/PeopleConfigurationsummary"
+    OrganizationConfigurationDetail:
       type: object
-      description: 軟體組態回應資料
+      description: 組織組態回應資料
       allOf:
-        - $ref: "#/components/schemas/SoftwareConfigurationSummary"
+        - $ref: "#/components/schemas/PeopleConfigurationsummary"
         - type: object
           properties:
             #            tenant:
@@ -442,8 +418,8 @@ components:
               description: 組態編號的後3碼流水號
             ciType:
               type: string
-              description: 組態項目類型 (固定為 SOFTWARE)
-              example: "SOFTWARE"
+              description: 組態項目類型 (固定為 ORGANIZATION)
+              example: "ORGANIZATION"
             description:
               type: string
               description: 組態項目的詳細說明
@@ -459,43 +435,23 @@ components:
             assetOwner:
               type: string
               description: 資產擁有者
-            #        assetCustodian:
-            #          type: string
-            #          description: 資產管理者/保管人
-            #        location:
-            #          type: string
-            #          description: 資產所在地點
-            #        ownerUid:
-            #          type: string
-            #          format: uuid
-            #          description: 此資產的負責人 UID
-            #        departmentUid:
-            #          type: string
-            #          format: uuid
-            #          description: 此資產所屬的部門 UID
+            #            assetCustodian:
+            #              type: string
+            #              description: 資產管理者/保管人 (原型未顯示)
+            location:
+              type: string
+              description: 資產所在地點
+            #            enabled:
+            #              type: boolean
+            #              description: 是否啟用
             status:
               $ref: "#/components/schemas/ConfigurationStatus"
             note:
               type: string
               description: 備註
-            #        version:
-            #          type: string
-            #          description: 軟體版本
-            #        vendor:
-            #          type: string
-            #          description: 供應商
-            #        licenseKey:
-            #          type: string
-            #          description: 授權金鑰
-            #        installDate:
-            #          type: string
-            #          format: date
-            #          description: 安裝日期
-            informationSystems:
-              description: 關聯的資通系統
-              type: array
-              items:
-                - $ref: "#/components/schemas/InformationSystemSummary"
+            #            headcount:
+            #              type: integer
+            #              description: 人員數量 (DB 欄位，原型未顯示)
             createdAt:
               type: string
               format: date-time
@@ -508,23 +464,6 @@ components:
               $ref: "#/components/schemas/AccountSummary"
             updatedBy:
               $ref: "#/components/schemas/AccountSummary"
-    InformationSystemSummary:
-      type: object
-      description: 資通系統參照
-      properties:
-        uid:
-          type: string
-          format: uuid
-          description: 資通系統 UID
-        name:
-          type: string
-          description: 資通系統名稱
-        status:
-          type: string
-          description: 啟用狀態 (ENABLED/DISABLED)
-          enum:
-            - ENABLED
-            - DISABLED
     AccountSummary:
       type: object
       required:
@@ -569,6 +508,12 @@ components:
           type: integer
           minimum: 0
     # ==================== 通用 Schemas ====================
+    ConfigurationStatus:
+      type: string
+      description: 啟用狀態。
+      enum:
+        - ENABLED
+        - DISABLED
     ErrorResponse:
       type: object
       required:
@@ -617,12 +562,7 @@ components:
             - type: string
             - type: number
             - type: boolean
-    ConfigurationStatus:
-      type: string
-      description: 啟用狀態。
-      enum:
-        - ENABLED
-        - DISABLED
+
   responses:
     BadRequest:
       description: 請求參數或內容錯誤
@@ -663,5 +603,5 @@ components:
 security:
   - BearerAuth: []
 tags:
-  - name: SoftwareConfigurations
-    description: 軟體組態管理相關 API
+  - name: PeopleConfigurations
+    description: 組織組態管理相關 API

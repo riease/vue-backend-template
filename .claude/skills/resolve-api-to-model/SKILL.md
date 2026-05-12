@@ -155,12 +155,12 @@ export class UserDataModel extends BaseFormDataModel {
   // Key 使用 OpenAPI 規格中的 OperationId
   toPayloadMap(): Record<string, Record<string, any>> {
     return {
-      'AR3-Users-Create': {
+      'Users-Create': {
         username: this.username,
         email: this.email,
         password: this.password,
       },
-      'AR3-Users-Update': {
+      'Users-Update': {
         email: this.email,
         displayName: this.displayName,
       },
@@ -198,7 +198,7 @@ export class UserDataModel extends BaseFormDataModel {
         *   `minimum`/`maximum` (number) -> `.min(n, '錯誤訊息')` / `.max(n, '錯誤訊息')`
 *   **Payload Mapping (`toPayloadMap`)**: 
     *   **Key 使用 OperationId**: 必須使用 OpenAPI 規格中定義的 `operationId` 作為 Key。
-    *   範例: `AR3-Users-Create`, `AR3-Users-Update`, `AR3-Accounts-Create` 等。
+    *   範例: `Users-Create`, `Users-Update`, `Accounts-Create` 等。
     *   這些 Key 會被 API client wrapper 用來識別對應的 API 端點。
     *   每個 Key 對應的 Value 是該 API 端點所需的 request body 結構。
 *   **Imports**: 

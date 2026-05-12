@@ -136,7 +136,7 @@ export class AccountDataModel extends BaseFormDataModel {
    */
   toPayloadMap(): Record<string, Record<string, any>> {
     return {
-      "AR3-Accounts-Create": {
+      "Accounts-Create": {
         roleUid: this.roleUid,
         displayName: this.displayName,
         email: this.email,
@@ -145,13 +145,13 @@ export class AccountDataModel extends BaseFormDataModel {
         password: this.password,
         passwordConfirm: this.passwordConfirm,
       },
-      "AR3-Accounts-Update": {
+      "Accounts-Update": {
         roleUid: this.roleUid,
         displayName: this.displayName,
         email: this.email,
         status: this.status,
       },
-      "AR3-Accounts-ChangePassword": {
+      "Accounts-ChangePassword": {
         newPassword: this.newPassword,
         newPasswordConfirm: this.newPasswordConfirm,
       },

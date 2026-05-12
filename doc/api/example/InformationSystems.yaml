@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: AR3-InformationSystems 資通系統基本資料維護
+  title: InformationSystems 資通系統基本資料維護
   description: |
     ## API 清單
-    * AR3-InformationSystems-Create 新增資通系統
-    * AR3-InformationSystems-Search 查詢資通系統列表
-    * AR3-InformationSystems-Read 查詢資通系統
-    * AR3-InformationSystems-Update 更新資通系統
-    * AR3-InformationSystems-Delete 刪除資通系統
+    * InformationSystems-Create 新增資通系統
+    * InformationSystems-Search 查詢資通系統列表
+    * InformationSystems-Read 查詢資通系統
+    * InformationSystems-Update 更新資通系統
+    * InformationSystems-Delete 刪除資通系統
 
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -27,7 +27,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -42,7 +42,7 @@ paths:
       tags:
         - InformationSystems
       summary: 查詢資通系統列表
-      operationId: AR3-InformationSystems-Search
+      operationId: InformationSystems-Search
       description: |
         依 `docs/features/資通系統基本資料維護.feature` 的「依資通系統名稱查詢」、「瀏覽資通系統列表分頁」情境，
         提供名稱、共同性系統、維護/開發商與啟用狀態等條件式查詢，並支援分頁。資料來源為
@@ -110,7 +110,7 @@ paths:
       tags:
         - InformationSystems
       summary: 新增資通系統
-      operationId: AR3-InformationSystems-Create
+      operationId: InformationSystems-Create
       description: |
         對應 BDD「新增資通系統資料」與「新增資通系統時缺少必要欄位」情境，
         需驗證名稱、共同性系統、維護/開發商與狀態等必填欄位，並寫入 `public.information_systems`。
@@ -165,7 +165,7 @@ paths:
       tags:
         - InformationSystems
       summary: 查詢資通系統
-      operationId: AR3-InformationSystems-Read
+      operationId: InformationSystems-Read
       description: |
         依 BDD「編輯資通系統資料」前的預填需求，回傳指定系統的完整資訊，
         以便前端顯示在「新增/編輯」表單。
@@ -196,7 +196,7 @@ paths:
       tags:
         - InformationSystems
       summary: 更新資通系統
-      operationId: AR3-InformationSystems-Update
+      operationId: InformationSystems-Update
       description: |
         依 BDD「編輯資通系統資料」與「新增資通系統時缺少必要欄位」規則，
         更新名稱、共同性系統、維護/開發商、狀態與備註。更新會寫入 `public.information_systems`
@@ -236,7 +236,7 @@ paths:
       tags:
         - InformationSystems
       summary: 刪除資通系統
-      operationId: AR3-InformationSystems-Delete
+      operationId: InformationSystems-Delete
       description: |
         對應 BDD「刪除資通系統資料」情境。刪除動作為軟刪除，將 `public.information_systems.deleted` 標記為 true，
         並針對 `public.system_ci_map`、`public.protection_level_assessments` 等關聯資料檢查是否可安全移除或阻擋操作。

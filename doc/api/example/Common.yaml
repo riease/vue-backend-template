@@ -1,21 +1,21 @@
 openapi: 3.1.0
 info:
-  title: AR3-Common 通用資料查詢
+  title: Common 通用資料查詢
   description: |
     做為選單元件的清單內容，如：下拉選單、radio, checkbox,...，故回應的資料狀態須為未刪除且啟用。
 
     ## API 清單
-    * AR3-Common-Role-Search 查詢角色清單
-    * AR3-Common-Year-Search 查詢年度清單
-    * AR3-Common-ProtectionLevel-Search 查詢防護需求等級清單
-    * AR3-Common-Tenant-Search 查詢租戶(客戶)列表(用於租戶選擇器)
-    * AR3-Common-InformationSystem-Search 查詢資通系統列表(用於資通系統下拉選單)
-    * AR3-Common-InformationSystem-SearchProtectionLevelNotAssessment 查詢該年度未執行防護需求等級評估的資通系統列表(用於資通系統下拉選單)
-    * AR3-Common-Configuration-CodePrefix 查詢組態管理組態編號前置碼清單(依子類別決定前置碼)
-    * AR3-Common-Configuration-PersonalDataItems 查詢資訊組態管理-個人資料類別
-    * AR3-Common-SecurityControl-Search 查詢資通系統防護基準控制措施項目清單
-    * AR3-Common-SecurityControlFamily-Search 查詢資通系統防護基準控制措施構面清單
-    * AR3-Common-AssessmentStatus-Search 查詢評估狀態清單(用於查詢條件下拉選單)
+    * Common-Role-Search 查詢角色清單
+    * Common-Year-Search 查詢年度清單
+    * Common-ProtectionLevel-Search 查詢防護需求等級清單
+    * Common-Tenant-Search 查詢租戶(客戶)列表(用於租戶選擇器)
+    * Common-InformationSystem-Search 查詢資通系統列表(用於資通系統下拉選單)
+    * Common-InformationSystem-SearchProtectionLevelNotAssessment 查詢該年度未執行防護需求等級評估的資通系統列表(用於資通系統下拉選單)
+    * Common-Configuration-CodePrefix 查詢組態管理組態編號前置碼清單(依子類別決定前置碼)
+    * Common-Configuration-PersonalDataItems 查詢資訊組態管理-個人資料類別
+    * Common-SecurityControl-Search 查詢資通系統防護基準控制措施項目清單
+    * Common-SecurityControlFamily-Search 查詢資通系統防護基準控制措施構面清單
+    * Common-AssessmentStatus-Search 查詢評估狀態清單(用於查詢條件下拉選單)
             
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -40,7 +40,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -55,7 +55,7 @@ paths:
       tags:
         - Common
       summary: 查詢角色清單
-      operationId: AR3-Common-Role-Search
+      operationId: Common-Role-Search
       description: |
         依 `docs/features/帳號管理.feature` 的「新增/編輯帳號」情境，提供角色下拉選單使用的清單。  
         平台管理員可指定租戶以取得租戶自訂角色。資料來源為 `public.roles`。  
@@ -111,7 +111,7 @@ paths:
       tags:
         - Common
       summary: 查詢年度清單
-      operationId: AR3-Common-Year-Search
+      operationId: Common-Year-Search
       description: |
         服務所有需要「年度」下拉選單的模組，例如系統防護需求等級評估表、資通系統防護基準檢核表與
         資通系統清冊。後端會依 `source` 決定取值來源：
@@ -160,7 +160,7 @@ paths:
       tags:
         - Common
       summary: 查詢防護需求等級清單
-      operationId: AR3-Common-ProtectionLevel-Search
+      operationId: Common-ProtectionLevel-Search
       description: |
         回傳平台支援的防護需求等級選項 (HIGH/MEDIUM/LOW)，供評估表、清冊等功能復用。
         資料定義取自 `protection_level_assessments_*_level_check` 與
@@ -204,7 +204,7 @@ paths:
       tags:
         - Common
       summary: 查詢租戶列表，用於租戶選擇器的租戶清單查詢。
-      operationId: AR3-Common-Tenant-Search
+      operationId: Common-Tenant-Search
       description: |
         回應有效的租戶。查詢條件是未被刪除且已啟用的租戶。
         資料來源為 `public.tenants`，查詢結果依租戶名稱 ASC 排序。
@@ -252,7 +252,7 @@ paths:
       tags:
         - Common
       summary: 查詢資通系統列表 (資通系統下拉選單)
-      operationId: AR3-Common-InformationSystem-Search
+      operationId: Common-InformationSystem-Search
       description: |
         供各模組的「關聯資通系統」下拉選單使用，資料來源 `public.information_systems`。僅回傳未刪除且啟用的資通系統。
         支援依名稱關鍵字模糊查詢，並依名稱 ASC 排序，不提供分頁。
@@ -283,7 +283,7 @@ paths:
       tags:
         - Common
       summary: 查詢該年度未執行防護需求等級評估的資通系統列表 (資通系統下拉選單)
-      operationId: AR3-Common-InformationSystem-SearchProtectionLevelNotAssessment
+      operationId: Common-InformationSystem-SearchProtectionLevelNotAssessment
       description: |
         供系統防護需求等級評估管理模組的「資通系統」下拉選單使用。僅回傳指定年度中啟用且未執行防護需求等級評估的資通系統。
         支援依名稱關鍵字模糊查詢，並依名稱 ASC 排序，不提供分頁。
@@ -315,7 +315,7 @@ paths:
       tags:
         - Common
       summary: 查詢組態管理組態編號前置碼清單(依子類別決定前置碼)
-      operationId: AR3-Common-Configuration-CodePrefix
+      operationId: Common-Configuration-CodePrefix
       description: |
         供組態管理新增/編輯組態時，選擇不同的子類別時，變更組態編號的前置碼。  
         可以一次查詢所有類別的前置碼或是指定類別查詢。  
@@ -347,7 +347,7 @@ paths:
       tags:
         - Common
       summary: 查詢資訊組態管理-個人資料類別
-      operationId: AR3-Common-Configuration-PersonalDataItems
+      operationId: Common-Configuration-PersonalDataItems
       description: 查詢資訊組態管理的個人資料類別清單
       responses:
         "200":
@@ -369,7 +369,7 @@ paths:
       tags:
         - Common
       summary: 查詢資通系統防護基準控制措施項目清單
-      operationId: AR3-Common-SecurityControl-Search
+      operationId: Common-SecurityControl-Search
       description: |
         依據ISO版本及控制措施等級，查詢資通系統防護基準控制措施項目清單。  
         查詢條件 `isoStandard` 若沒有給值，預設為 `ISO/IEC 27001:2022`。  
@@ -403,7 +403,7 @@ paths:
       tags:
         - Common
       summary: 查詢資通系統防護基準控制措施構面清單
-      operationId: AR3-Common-SecurityControlFamily-Search
+      operationId: Common-SecurityControlFamily-Search
       description: |
         依據ISO版本及控制措施等級，查詢資通系統防護基準控制措施構面清單。
       parameters:
@@ -429,7 +429,7 @@ paths:
       tags:
         - Common
       summary: 查詢評估狀態清單(用於查詢條件下拉選單)
-      operationId: AR3-Common-AssessmentStatus-Search
+      operationId: Common-AssessmentStatus-Search
       description: |
         用於查詢條件下拉選單，如：資通系統防護基準檢核表列表查詢條件。  
         評估狀態包括：

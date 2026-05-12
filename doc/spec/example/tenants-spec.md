@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-Tenants.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-Tenants.yaml)
+- **API 規格檔案**: [`Tenants.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/Tenants.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/tenants`
 
@@ -33,7 +33,7 @@
 | 網址路由 | `/tenants` |
 | 程式變數名稱 | `handleSearch`, `doSearchClick` |
 | 對應 API Method | GET /api/{version}/tenants |
-| 對應 OperationId | `AR3-Tenants-Search` |
+| 對應 OperationId | `Tenants-Search` |
 
 ### 新增
 
@@ -46,7 +46,7 @@
 | 網址路由 | `/tenants/create` |
 | 程式變數名稱 | `handleCreate`, `doCreateClick` |
 | 對應 API Method | POST /api/{version}/tenants |
-| 對應 OperationId | `AR3-Tenants-Create` |
+| 對應 OperationId | `Tenants-Create` |
 
 ### 詳細
 
@@ -59,7 +59,7 @@
 | 網址路由 | `/tenants/detail/:tenantId` |
 | 程式變數名稱 | `handleRead`, `doReadClick` |
 | 對應 API Method | GET /api/{version}/tenants/{tenantId} |
-| 對應 OperationId | `AR3-Tenants-Read` |
+| 對應 OperationId | `Tenants-Read` |
 
 ### 編輯
 
@@ -72,7 +72,7 @@
 | 網址路由 | `/tenants/edit/:tenantId` |
 | 程式變數名稱 | `handleUpdate`, `doUpdateClick` |
 | 對應 API Method | PUT /api/{version}/tenants/{tenantId} |
-| 對應 OperationId | `AR3-Tenants-Update` |
+| 對應 OperationId | `Tenants-Update` |
 
 ### 刪除
 
@@ -85,7 +85,7 @@
 | 網址路由 | 無（在當前頁面執行） |
 | 程式變數名稱 | `handleDelete`, `doDeleteClick` |
 | 對應 API Method | DELETE /api/{version}/tenants/{tenantId} |
-| 對應 OperationId | `AR3-Tenants-Delete` |
+| 對應 OperationId | `Tenants-Delete` |
 
 ---
 

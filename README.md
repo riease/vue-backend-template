@@ -77,6 +77,8 @@ npm run preview
    └── ...
    ```
 
+   > 📦 範例：`doc/api/example/` 已附上一組可參考的去識別化 OpenAPI 規格（Accounts、Tenants、HardwareConfigurations 等），對應的功能規格單放在 `doc/spec/example/`，可作為 skills 產生流程的範本。
+
 3. **產生功能規格單**
 
    ```text
@@ -145,9 +147,35 @@ npm run preview
 │       └── resolve-api-to-query/
 │           └── scripts/
 ├── doc/
-│   ├── api/                     # OpenAPI 規格輸入
-│   └── spec/                    # 功能規格單輸出
+│   ├── api/
+│   │   └── example/             # 去識別化 OpenAPI 範例規格
+│   └── spec/
+│       └── example/             # 對應 example 規格的功能規格單
 └── src/
     ├── enums/                   # 產生的列舉
     └── model/                   # 產生的 DataModel / QueryParameter
+```
+
+### 📦 內附範例 (Example Bundle)
+
+`doc/api/example/` 與 `doc/spec/example/` 內附完整且已去識別化的範例集，示範一個典型的後台系統有哪些 API 與規格單：
+
+| 主題 | OpenAPI 規格 | 功能規格單 |
+|---|---|---|
+| 共用查詢（角色、年度、租戶等） | `doc/api/example/Common.yaml` | — |
+| 認證 / 個人資訊 | `Auth.yaml`, `Me.yaml` | — |
+| 帳號管理 | `Accounts.yaml` | `accounts-spec.md` |
+| 租戶管理 | `Tenants.yaml` | `tenants-spec.md` |
+| 硬體 / 軟體 / 資訊組態 | `HardwareConfigurations.yaml`, `SoftwareConfigurations.yaml`, `InformationConfigurations.yaml`, `InfrastructureConfigurations.yaml`, `PeopleConfigurations.yaml` | 對應同名 `*-spec.md` |
+| 資通系統與盤點 | `InformationSystems.yaml`, `SystemInventories.yaml`, `SystemChecklists.yaml` | 對應同名 `*-spec.md` |
+| 防護等級評估 | `ProtectionLevelAssessments.yaml` | `protection-level-assessments-spec.md` |
+
+**OperationId 命名慣例**：採 `{Resource}-{Action}` 形式，例如 `Accounts-Create`、`Tenants-Search`、`HardwareConfigurations-Update`。`AccountDataModel.ts` 中的 `toPayloadMap()` key 即對應這些 operationId。
+
+**試跑流程**：可直接以 `doc/api/example/` 為輸入測試本專案內附 skills，例如：
+
+```bash
+node .claude/skills/resolve-api-to-query/scripts/generate-query-params.js \
+  --input doc/api/example \
+  --output src/model/ExampleQueryParameter.ts
 ```

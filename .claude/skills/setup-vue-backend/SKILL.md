@@ -1,11 +1,11 @@
 ---
 name: setup-vue-backend
-description: Installs standard Vue 3 dependencies and configures scripts for the AutoRisk-365 compliant stack. This skill hydrates a package.json with the required dependencies and run scripts.
+description: Installs standard Vue 3 dependencies and configures scripts for the Vue 3 backend template stack. This skill hydrates a package.json with the required dependencies and run scripts.
 ---
 
 # Setup Vue Backend Skill
 
-This skill installs the standard set of libraries and tools used in the Vue frontend projects (e.g., AutoRisk-365 web). It ensures that a project has the correct `dependencies`, `devDependencies`, and `scripts` configured.
+This skill installs the standard set of libraries and tools used in the Vue frontend projects (e.g., the demo project). It ensures that a project has the correct `dependencies`, `devDependencies`, and `scripts` configured.
 
 ## Usage
 

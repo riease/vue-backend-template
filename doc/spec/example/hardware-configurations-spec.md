@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-HardwareConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-HardwareConfigurations.yaml)
+- **API 規格檔案**: [`HardwareConfigurations.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/HardwareConfigurations.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/hardware-configurations`
 

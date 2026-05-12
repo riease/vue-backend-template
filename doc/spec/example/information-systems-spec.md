@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-InformationSystems.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-InformationSystems.yaml)
+- **API 規格檔案**: [`InformationSystems.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/InformationSystems.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/information-systems`
 
@@ -33,7 +33,7 @@
 | 網址路由 | `/information-systems` |
 | 程式變數名稱 | `handleSearch`, `doSearchClick` |
 | 對應 API Method | GET /api/{version}/information-systems |
-| 對應 OperationId | `AR3-InformationSystems-Search` |
+| 對應 OperationId | `InformationSystems-Search` |
 
 ### 新增
 
@@ -46,7 +46,7 @@
 | 網址路由 | `/information-systems/create` |
 | 程式變數名稱 | `handleCreate`, `doCreateClick` |
 | 對應 API Method | POST /api/{version}/information-systems |
-| 對應 OperationId | `AR3-InformationSystems-Create` |
+| 對應 OperationId | `InformationSystems-Create` |
 
 ### 詳細
 
@@ -59,7 +59,7 @@
 | 網址路由 | `/information-systems/detail/:systemId` |
 | 程式變數名稱 | `handleRead`, `doReadClick` |
 | 對應 API Method | GET /api/{version}/information-systems/{systemId} |
-| 對應 OperationId | `AR3-InformationSystems-Read` |
+| 對應 OperationId | `InformationSystems-Read` |
 
 ### 編輯
 
@@ -72,7 +72,7 @@
 | 網址路由 | `/information-systems/edit/:systemId` |
 | 程式變數名稱 | `handleUpdate`, `doUpdateClick` |
 | 對應 API Method | PUT /api/{version}/information-systems/{systemId} |
-| 對應 OperationId | `AR3-InformationSystems-Update` |
+| 對應 OperationId | `InformationSystems-Update` |
 
 ### 刪除
 
@@ -85,7 +85,7 @@
 | 網址路由 | 無（在當前頁面執行） |
 | 程式變數名稱 | `handleDelete`, `doDeleteClick` |
 | 對應 API Method | DELETE /api/{version}/information-systems/{systemId} |
-| 對應 OperationId | `AR3-InformationSystems-Delete` |
+| 對應 OperationId | `InformationSystems-Delete` |
 
 ---
 

@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-Accounts.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-Accounts.yaml)
+- **API 規格檔案**: [`Accounts.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/Accounts.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/accounts`
 
@@ -40,7 +40,7 @@
 | 網址路由 | `/accounts` |
 | 程式變數名稱 | `handleSearch`, `doSearchClick` |
 | 對應 API Method | GET /api/{version}/accounts |
-| 對應 OperationId | `AR3-Accounts-Search` |
+| 對應 OperationId | `Accounts-Search` |
 
 ### 新增
 
@@ -53,7 +53,7 @@
 | 網址路由 | `/accounts/create` |
 | 程式變數名稱 | `handleCreate`, `doCreateClick` |
 | 對應 API Method | POST /api/{version}/accounts |
-| 對應 OperationId | `AR3-Accounts-Create` |
+| 對應 OperationId | `Accounts-Create` |
 
 ### 詳細
 
@@ -66,7 +66,7 @@
 | 網址路由 | `/accounts/detail/:accountId` |
 | 程式變數名稱 | `handleRead`, `doReadClick` |
 | 對應 API Method | GET /api/{version}/accounts/{accountId} |
-| 對應 OperationId | `AR3-Accounts-Read` |
+| 對應 OperationId | `Accounts-Read` |
 
 ### 編輯
 
@@ -79,7 +79,7 @@
 | 網址路由 | `/accounts/edit/:accountId` |
 | 程式變數名稱 | `handleUpdate`, `doUpdateClick` |
 | 對應 API Method | PUT /api/{version}/accounts/{accountId} |
-| 對應 OperationId | `AR3-Accounts-Update` |
+| 對應 OperationId | `Accounts-Update` |
 
 ### 刪除
 
@@ -92,7 +92,7 @@
 | 網址路由 | 無（在當前頁面執行） |
 | 程式變數名稱 | `handleDelete`, `doDeleteClick` |
 | 對應 API Method | DELETE /api/{version}/accounts/{accountId} |
-| 對應 OperationId | `AR3-Accounts-Delete` |
+| 對應 OperationId | `Accounts-Delete` |
 
 ### 變更密碼
 
@@ -105,7 +105,7 @@
 | 網址路由 | 無（彈出視窗） |
 | 程式變數名稱 | `handleChangePassword`, `doChangePasswordClick` |
 | 對應 API Method | POST /api/{version}/accounts/{accountId}/password |
-| 對應 OperationId | `AR3-Accounts-ChangePassword` |
+| 對應 OperationId | `Accounts-ChangePassword` |
 
 ---
 

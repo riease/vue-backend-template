@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
-  title: AR3-PeopleConfigurations 組織組態管理
+  title: HardwareConfigurations 硬體組態管理
   description: |
     ## API 清單
-    * AR3-PeopleConfigurations-Create 新增組織組態
-    * AR3-PeopleConfigurations-Search 查詢組織組態列表
-    * AR3-PeopleConfigurations-Read 查詢組織組態
-    * AR3-PeopleConfigurations-Update 更新組織組態
-    * AR3-PeopleConfigurations-Delete 刪除組織組態
-        
+    * HardwareConfigurations-Create 新增硬體組態
+    * HardwareConfigurations-Search 查詢硬體組態列表
+    * HardwareConfigurations-Read 查詢硬體組態
+    * HardwareConfigurations-Update 更新硬體組態
+    * HardwareConfigurations-Delete 刪除硬體組態
+
     ## 非200狀態回應說明
     目前定義的異常狀態如下，以下狀態於各API回應內容格式皆相同，因此各API預設只描述正常 200 的回應情況。
     * 請求格式錯誤。 http status code 400。
@@ -19,22 +19,22 @@ info:
     * 伺服端錯誤。 http status code 500。
   version: 1.0.0
 servers:
-  - url: "{baseUrl}/api/{version}/people-configurations"
+  - url: "{baseUrl}/api/{version}/hardware-configurations"
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
 paths:
   /:
     post:
-      operationId: createPeopleConfiguration
-      summary: AR3-PeopleConfigurations-Create 新增組織組態
-      description: 新增一筆組織組態資料
+      operationId: createHardwareConfiguration
+      summary: HardwareConfigurations-Create 新增硬體組態
+      description: 新增一筆硬體組態資料
       tags:
-        - PeopleConfigurations
+        - HardwareConfigurations
       #      parameters:
       #        - $ref: '#/components/parameters/XTenantUidHeader'
       requestBody:
@@ -42,20 +42,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateOrganizationConfigurationRequest"
+              $ref: "#/components/schemas/CreateHardwareConfigurationRequest"
       responses:
         "200":
-          description: 成功新增組織組態
+          description: 成功新增硬體組態
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationConfigurationDetail"
+                $ref: "#/components/schemas/HardwareConfigurationDetail"
     get:
-      operationId: searchPeopleConfigurations
-      summary: AR3-PeopleConfigurations-Search 查詢組織組態列表
-      description: 依條件查詢組織組態列表，支援分頁
+      operationId: searchHardwareConfigurations
+      summary: HardwareConfigurations-Search 查詢硬體組態列表
+      description: 依條件查詢硬體組態列表，支援分頁
       tags:
-        - PeopleConfigurations
+        - HardwareConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - name: configurationCode
@@ -64,14 +64,28 @@ paths:
           required: false
           schema:
             type: string
-            example: "PE-1-1-001"
+            example: "HW-1-1"
         - name: name
           in: query
           description: 資產名稱 (支援模糊查詢)
           required: false
           schema:
             type: string
-            example: "資訊安全組織角色名稱"
+            example: "FortiGate 防火牆"
+        - name: assetTag
+          in: query
+          description: 財產編號或資產標籤
+          required: false
+          schema:
+            type: string
+            example: "ASSET-1001"
+        #        - name: serialNumber
+        #          in: query
+        #          description: 序號 (支援模糊查詢)
+        #          required: false
+        #          schema:
+        #            type: string
+        #            example: "FGT60E-ABC12345"
         #        - $ref: '#/components/parameters/CategoryFilterParam'
         - $ref: "#/components/parameters/SubcategoryFilterParam"
         - $ref: "#/components/parameters/StatusFilterParam"
@@ -81,11 +95,11 @@ paths:
         - $ref: "#/components/parameters/SortOrderParam"
       responses:
         "200":
-          description: 組織組態分頁結果
+          description: 硬體組態分頁結果
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationConfigurationListResponse"
+                $ref: "#/components/schemas/HardwareConfigurationListResponse"
               examples:
                 default:
                   summary: 依子類別與狀態查詢
@@ -95,49 +109,51 @@ paths:
                       offset: 0
                       total: 2
                     items:
-                      - uid: 12345678-1234-1234-1234-1234567890ab
-                        configurationCode: PE-1-1-001
-                        name: 資安組織職責
-                        category: ORGANIZATION
-                        subcategory: ROLE
-                        categoryDisplayName: "ORGANIZATION,PE"
-                        subcategoryDisplayName: "1-1 組織職責"
+                      - uid: 11111111-2222-3333-4444-555555555555
+                        configurationCode: HW-1-1-001
+                        name: FortiGate 防火牆
+                        category: HARDWARE
+                        subcategory: FIREWALL
+                        categoryDisplayName: "HARDWARE,HW"
+                        subcategoryDisplayName: "1-1 防火牆"
+                        assetTag: ASSET-1001
                         status: ENABLED
                         createdAt: 2024-03-01T02:00:00Z
                         updatedAt: 2024-04-05T07:30:00Z
-                      - uid: 22345678-1234-1234-1234-1234567890ab
-                        configurationCode: PE-1-1-002
-                        name: 資安委員會
-                        category: ORGANIZATION
-                        subcategory: ROLE
-                        categoryDisplayName: "ORGANIZATION,PE"
-                        subcategoryDisplayName: "1-1 組織職責"
+                      - uid: 66666666-7777-8888-9999-000000000000
+                        configurationCode: HW-1-1-002
+                        name: Cisco 交換器
+                        category: HARDWARE
+                        subcategory: SWITCH
+                        categoryDisplayName: "HARDWARE,HW"
+                        subcategoryDisplayName: "1-2 交換器"
+                        assetTag: ASSET-1002
                         status: DISABLED
                         createdAt: 2024-02-10T05:12:00Z
                         updatedAt: 2024-02-20T03:45:00Z
   /{uid}:
     get:
-      operationId: readOrganizationConfiguration
-      summary: AR3-PeopleConfigurations-Read 查詢組織組態
-      description: 依 UID 查詢單筆組織組態詳細資料
+      operationId: readHardwareConfiguration
+      summary: HardwareConfigurations-Read 查詢硬體組態
+      description: 依 UID 查詢單筆硬體組態詳細資料
       tags:
-        - PeopleConfigurations
+        - HardwareConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - $ref: "#/components/parameters/UidPath"
       responses:
         "200":
-          description: 成功查詢組織組態
+          description: 成功查詢硬體組態
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationConfigurationDetail"
+                $ref: "#/components/schemas/HardwareConfigurationDetail"
     put:
-      operationId: updateOrganizationConfiguration
-      summary: AR3-PeopleConfigurations-Update 更新組織組態
-      description: 更新單筆組織組態資料
+      operationId: updateHardwareConfiguration
+      summary: HardwareConfigurations-Update 更新硬體組態
+      description: 更新單筆硬體組態資料
       tags:
-        - PeopleConfigurations
+        - HardwareConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - $ref: "#/components/parameters/UidPath"
@@ -146,20 +162,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateOrganizationConfigurationRequest"
+              $ref: "#/components/schemas/UpdateHardwareConfigurationRequest"
       responses:
         "200":
-          description: 成功更新組織組態
+          description: 成功更新硬體組態
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationConfigurationDetail"
+                $ref: "#/components/schemas/HardwareConfigurationDetail"
     delete:
-      operationId: deleteOrganizationConfiguration
-      summary: AR3-PeopleConfigurations-Delete 刪除組織組態
-      description: 軟刪除單筆組織組態資料 (設定 deleted=true)
+      operationId: deleteHardwareConfiguration
+      summary: HardwareConfigurations-Delete 刪除硬體組態
+      description: 軟刪除單筆硬體組態資料 (設定 deleted=true)
       tags:
-        - PeopleConfigurations
+        - HardwareConfigurations
       parameters:
         #        - $ref: '#/components/parameters/XTenantUidHeader'
         - $ref: "#/components/parameters/UidPath"
@@ -219,30 +235,6 @@ components:
       required: false
       schema:
         $ref: "#/components/schemas/ConfigurationStatus"
-    SortByParam:
-      name: sortBy
-      in: query
-      description: 排序欄位，預設 `configurationCode`。
-      required: false
-      schema:
-        type: string
-        enum:
-          - configurationCode
-          - name
-          - subcategory
-          - status
-        default: configurationCode
-    SortOrderParam:
-      name: sortOrder
-      in: query
-      description: 排序方向，預設 `ASC`。
-      required: false
-      schema:
-        type: string
-        enum:
-          - ASC
-          - DESC
-        default: ASC
     LimitParam:
       name: limit
       in: query
@@ -262,11 +254,36 @@ components:
         type: integer
         minimum: 0
         default: 0
+    SortByParam:
+      name: sortBy
+      in: query
+      description: 排序欄位，預設 `configurationCode`。
+      required: false
+      schema:
+        type: string
+        enum:
+          - configurationCode
+          - name
+          - subcategory
+          - status
+          - createdAt
+        default: configurationCode
+    SortOrderParam:
+      name: sortOrder
+      in: query
+      description: 排序方向，預設 `ASC` (組態編號由小到大)。
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+        default: ASC
   schemas:
     # ==================== 請求 Schemas ====================
-    BaseOrganizationConfigurationRequest:
+    BaseHardwareConfigurationRequest:
       type: object
-      description: 組織組態請求資料
+      description: 硬體組態請求資料
       required:
         - configurationCode
         - name
@@ -274,36 +291,37 @@ components:
         - subcategory
         - location
         - status
+        - informationSystemUids
       properties:
+        category:
+          type: string
+          maxLength: 100
+          description: 組態分類 (例如：5 Hardware,HW)
+          example: "5 Hardware,HW"
+        subcategory:
+          type: string
+          maxLength: 100
+          description: 組態子分類 (例如：Firewall)
+          example: "Firewall"
         configurationCode:
           type: string
           maxLength: 100
-          description: 組態編號 (例如：PE-1-1-001)
-          example: "PE-1-1-001"
+          description: 組態編號 (例如：HW-1-1-001)
+          example: "HW-1-1-001"
         name:
           type: string
           maxLength: 255
           description: 資產名稱
-          example: "資訊安全組織角色名稱"
+          example: "FortiGate 60E"
         description:
           type: string
           description: 組態項目的詳細說明
-          example: "內部人員角色"
-        category:
-          type: string
-          maxLength: 100
-          description: 組態分類 (例如：1 People,PE)
-          example: "1 People,PE"
-        subcategory:
-          type: string
-          maxLength: 100
-          description: 組態子分類 (例如：內部人員、外部人員)
-          example: "內部人員"
+          example: "邊界防火牆設備"
         model:
           type: string
           maxLength: 255
           description: 資產型號
-          example: "資訊安全組織角色"
+          example: "FG-60E"
         responsibleDepartment:
           type: string
           maxLength: 255
@@ -313,68 +331,117 @@ components:
           type: string
           maxLength: 255
           description: 權責主管
-          example: "王大明"
+          example: "張主管"
         assetOwner:
           type: string
           maxLength: 255
           description: 資產擁有者
-          example: "李小華"
+          example: "王大明"
         #        assetCustodian:
         #          type: string
         #          maxLength: 255
-        #          description: 資產管理者/保管人 (原型未顯示)
+        #          description: 資產管理者/保管人
+        #          example: "李小華"
+        assetTag:
+          type: string
+          maxLength: 255
+          description: 財產編號或資產標籤
+          example: "ASSET-1001"
         location:
           type: string
           maxLength: 255
           description: 資產所在地點
-          example: "總部"
-        #        ownerUid:
-        #          type: string
-        #          format: uuid
-        #          description: 此資產的負責人 UID (原型未顯示)
-        #        departmentUid:
-        #          type: string
-        #          format: uuid
-        #          description: 此資產所屬的部門 UID (原型未顯示)
+          example: "機房 A 區"
+        rackCode:
+          type: string
+          maxLength: 100
+          description: 機櫃編號
+          example: "RACK-A01"
+        rackUnit:
+          type: string
+          maxLength: 50
+          description: 機櫃 U 號
+          example: "U06"
+        ipAddress:
+          type: string
+          maxLength: 100
+          description: 設備 IP 位址
+          example: "10.0.0.10"
+        firmwareVersion:
+          type: string
+          maxLength: 100
+          description: 韌體版本
+          example: "v7.0.12"
+        memorySpec:
+          type: string
+          maxLength: 100
+          description: 記憶體規格
+          example: "8GB DDR4"
+        cpuSpec:
+          type: string
+          maxLength: 100
+          description: CPU 規格
+          example: "4C2.0GHz"
+        storageCapacity:
+          type: string
+          maxLength: 100
+          description: 儲存容量(硬體空間)
+          example: "256GB SSD"
         status:
           $ref: "#/components/schemas/ConfigurationStatus"
         note:
           type: string
           description: 備註
-          example: "委外人員角色"
-    #        headcount:
-    #          type: integer
-    #          minimum: 0
-    #          description: 人員數量 (DB 欄位，原型未顯示)
-    CreateOrganizationConfigurationRequest:
+          example: "年度汰換計畫設備"
+        #        serialNumber:
+        #          type: string
+        #          maxLength: 255
+        #          description: 出廠序號
+        #          example: "FGT60E-ABC12345"
+        #        propertyNumber:
+        #          type: string
+        #          maxLength: 255
+        #          description: 機構內部財產編號 (若與資產標籤不同)
+        #          example: "PROP-5566"
+        #        purchaseDate:
+        #          type: string
+        #          format: date
+        #          description: 採購日期
+        #          example: "2024-01-15"
+        #        warrantyExpiryDate:
+        #          type: string
+        #          format: date
+        #          description: 保固到期日
+        #          example: "2027-01-14"
+        informationSystemUids:
+          description: 關聯的資通系統 UID 清單
+          type: array
+          items:
+            type: string
+            format: uuid
+            description: 關聯資通系統 UID
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    CreateHardwareConfigurationRequest:
       allOf:
-        - $ref: "#/components/schemas/BaseOrganizationConfigurationRequest"
-    UpdateOrganizationConfigurationRequest:
+        - $ref: "#/components/schemas/BaseHardwareConfigurationRequest"
+    UpdateHardwareConfigurationRequest:
       allOf:
-        - $ref: "#/components/schemas/BaseOrganizationConfigurationRequest"
+        - $ref: "#/components/schemas/BaseHardwareConfigurationRequest"
     # ==================== 回應 Schemas ====================
-    PeopleConfigurationsummary:
+    HardwareConfigurationSummary:
       type: object
-      description: 組織組態列表項目（簡化版）
+      description: 硬體組態列表項目（簡化版）
       properties:
         uid:
           type: string
           format: uuid
-          description: 組織組態的唯一識別碼
+          description: 硬體組態的唯一識別碼
         configurationCode:
           type: string
           description: 組態編號
         name:
           type: string
           description: 資產名稱
-        createdAt:
-          type: string
-          format: date-time
-          description: 建立時間 (ISO 8601)
-        updatedAt:
-          type: string
-          format: date-time
-          description: 更新時間 (ISO 8601)
         category:
           type: string
           description: 組態分類
@@ -387,9 +454,20 @@ components:
         subcategoryDisplayName:
           type: string
           description: 組態子類別顯示名稱(項次 名稱)
+        assetTag:
+          type: string
+          description: 財產編號或資產標籤
         status:
           $ref: "#/components/schemas/ConfigurationStatus"
-    OrganizationConfigurationListResponse:
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間 (ISO 8601)
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新時間 (ISO 8601)
+    HardwareConfigurationListResponse:
       type: object
       required:
         - paging
@@ -400,12 +478,12 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/PeopleConfigurationsummary"
-    OrganizationConfigurationDetail:
+            $ref: "#/components/schemas/HardwareConfigurationSummary"
+    HardwareConfigurationDetail:
       type: object
-      description: 組織組態回應資料
+      description: 硬體組態回應資料
       allOf:
-        - $ref: "#/components/schemas/PeopleConfigurationsummary"
+        - $ref: "#/components/schemas/HardwareConfigurationSummary"
         - type: object
           properties:
             #            tenant:
@@ -418,8 +496,8 @@ components:
               description: 組態編號的後3碼流水號
             ciType:
               type: string
-              description: 組態項目類型 (固定為 ORGANIZATION)
-              example: "ORGANIZATION"
+              description: 組態項目類型 (固定為 HARDWARE)
+              example: "HARDWARE"
             description:
               type: string
               description: 組態項目的詳細說明
@@ -437,21 +515,55 @@ components:
               description: 資產擁有者
             #            assetCustodian:
             #              type: string
-            #              description: 資產管理者/保管人 (原型未顯示)
+            #              description: 資產管理者/保管人
             location:
               type: string
               description: 資產所在地點
-            #            enabled:
-            #              type: boolean
-            #              description: 是否啟用
+            rackCode:
+              type: string
+              description: 機櫃編號
+            rackUnit:
+              type: string
+              description: 機櫃 U 號
+            ipAddress:
+              type: string
+              description: 設備 IP 位址
+            firmwareVersion:
+              type: string
+              description: 韌體版本
+            memorySpec:
+              type: string
+              description: 記憶體規格
+            cpuSpec:
+              type: string
+              description: CPU 規格
+            storageCapacity:
+              type: string
+              description: 儲存容量(硬體空間)
             status:
               $ref: "#/components/schemas/ConfigurationStatus"
             note:
               type: string
               description: 備註
-            #            headcount:
-            #              type: integer
-            #              description: 人員數量 (DB 欄位，原型未顯示)
+            #            serialNumber:
+            #              type: string
+            #              description: 出廠序號
+            #            propertyNumber:
+            #              type: string
+            #              description: 機構內部財產編號
+            #            purchaseDate:
+            #              type: string
+            #              format: date
+            #              description: 採購日期
+            #            warrantyExpiryDate:
+            #              type: string
+            #              format: date
+            #              description: 保固到期日
+            informationSystems:
+              description: 關聯的資通系統
+              type: array
+              items:
+                - $ref: "#/components/schemas/InformationSystemSummary"
             createdAt:
               type: string
               format: date-time
@@ -464,6 +576,23 @@ components:
               $ref: "#/components/schemas/AccountSummary"
             updatedBy:
               $ref: "#/components/schemas/AccountSummary"
+    InformationSystemSummary:
+      type: object
+      description: 資通系統參照
+      properties:
+        uid:
+          type: string
+          format: uuid
+          description: 資通系統 UID
+        name:
+          type: string
+          description: 資通系統名稱
+        status:
+          type: string
+          description: 啟用狀態 (ENABLED/DISABLED)
+          enum:
+            - ENABLED
+            - DISABLED
     AccountSummary:
       type: object
       required:
@@ -508,12 +637,6 @@ components:
           type: integer
           minimum: 0
     # ==================== 通用 Schemas ====================
-    ConfigurationStatus:
-      type: string
-      description: 啟用狀態。
-      enum:
-        - ENABLED
-        - DISABLED
     ErrorResponse:
       type: object
       required:
@@ -562,7 +685,12 @@ components:
             - type: string
             - type: number
             - type: boolean
-
+    ConfigurationStatus:
+      type: string
+      description: 啟用狀態。
+      enum:
+        - ENABLED
+        - DISABLED
   responses:
     BadRequest:
       description: 請求參數或內容錯誤
@@ -603,5 +731,5 @@ components:
 security:
   - BearerAuth: []
 tags:
-  - name: PeopleConfigurations
-    description: 組織組態管理相關 API
+  - name: HardwareConfigurations
+    description: 硬體組態管理相關 API

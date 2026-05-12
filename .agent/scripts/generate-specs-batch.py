@@ -17,9 +17,9 @@ SPEC_DIR = PROJECT_ROOT / "doc" / "spec"
 
 # 排除的 API 檔案 (基礎設施 API)
 EXCLUDED_FILES = [
-    "AR3-Common.yaml",
-    "AR3-Auth.yaml",
-    "AR3-Me.yaml"
+    "Common.yaml",
+    "Auth.yaml",
+    "Me.yaml"
 ]
 
 # HTTP Method 到 Action 的對應
@@ -40,15 +40,15 @@ def to_kebab_case(text):
 
 def extract_feature_name(api_title):
     """從 API title 提取功能名稱"""
-    # 移除 AR3- 前綴和英文部分
-    match = re.match(r'AR3-\w+\s+(.+)', api_title)
+    # 移除前綴和英文部分
+    match = re.match(r'\w+\s+(.+)', api_title)
     if match:
         return match.group(1).strip()
     return api_title
 
 def extract_prefix(api_title):
     """從 API title 提取英文前綴"""
-    match = re.match(r'AR3-(\w+)', api_title)
+    match = re.match(r'(\w+)', api_title)
     if match:
         return match.group(1)
     return "Unknown"

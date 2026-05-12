@@ -13,7 +13,7 @@
 
 ## 🔗 API 文件
 
-- **API 規格檔案**: [`AR3-SystemInventories.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/AR3-SystemInventories.yaml)
+- **API 規格檔案**: [`SystemInventories.yaml`](file:///Users/chi/Documents/ws_riease/ch3-library/vue-backend-template/doc/api/example/SystemInventories.yaml)
 - **API 版本**: 1.0.0
 - **Base URL**: `{baseUrl}/api/{version}/system-inventories`
 
@@ -33,7 +33,7 @@
 | 網址路由 | 無（觸發下載） |
 | 程式變數名稱 | `handleExport`, `doExportClick` |
 | 對應 API Method | GET /api/{version}/system-inventories/export |
-| 對應 OperationId | `AR3-SystemInventories-Export` |
+| 對應 OperationId | `SystemInventories-Export` |
 
 ---
 

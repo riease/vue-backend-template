@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: AR3-SystemInventories 資通系統清冊管理
+  title: SystemInventories 資通系統清冊管理
   description: |
     ## API 清單
-    * AR3-SystemInventories-Export 匯出資通系統清冊
+    * SystemInventories-Export 匯出資通系統清冊
 
     ## 非 200 狀態回應說明
     目前定義的異常狀態如下，以下狀態於各 API 回應內容格式皆相同，因此各 API 僅描述成功 (2xx) 回應：
@@ -23,7 +23,7 @@ servers:
     variables:
       baseUrl:
         description: 主機網址
-        default: "https://www.autorisk365.com"
+        default: "https://api.example.com"
       version:
         description: 版號
         default: "v1"
@@ -38,7 +38,7 @@ paths:
       tags:
         - SystemInventories
       summary: 匯出資通系統清冊
-      operationId: AR3-SystemInventories-Export
+      operationId: SystemInventories-Export
       description: |
         對應 `docs/features/資通系統清冊管理.feature` 的「匯出資通系統清冊」情境。
         依目前查詢條件 (年度、系統名稱、防護等級) 產出 XLSX 檔案供下載。
